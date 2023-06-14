@@ -19,3 +19,7 @@
 
 # Go workspace file
 go.work
+
+# Settings and credentials
+**/config.yaml
+**/cred.yaml

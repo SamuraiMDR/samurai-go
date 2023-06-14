@@ -1,0 +1,6 @@
+---
+# Example config
+url: https://hostname
+insecure: false
+debug: true
+profile: default
