@@ -4,3 +4,6 @@ url: https://hostname
 insecure: false
 debug: true
 profile: default
+apiKey: <redacted>
+passkey: <redacted>
+deviceId: <redacted>

@@ -33,17 +33,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type Credentials struct {
-	APIKey   string `yaml:"apiKey"`
-	Passkey  string `yaml:"passkey"`
-	DeviceId string `yaml:"deviceId"`
-}
-
 type Settings struct {
 	URL              string `yaml:"url"`
 	allowInsecureTLS bool   `yaml:"insecure"`
 	Debug            bool   `yaml:"debug"`
 	Profile          string `yaml:"profile"`
+	APIKey           string `yaml:"apiKey"`
+	Passkey          string `yaml:"passkey"`
+	DeviceId         string `yaml:"deviceId"`
 }
 
 type control struct {
@@ -56,6 +53,7 @@ type control struct {
 var errUnknownPayload = errors.New("unknown payload")
 
 // var errCorruptPayload = errors.New("corrupt payload")
+
 // var types = []string{"docker", "syslog", "pdns", "bouncer", "assets", "logfiles", "contrive_bouncer"} // Add new types here, same slice is used for filter validation
 type sas struct {
 	Payload string `json:"payload"`
@@ -74,7 +72,7 @@ type sasResult struct {
 //	return filepath.Base(dir)
 //}
 
-func getSAS(payload string, settings Settings, credentials Credentials) (sasResult, error) {
+func getSAS(payload string, settings Settings) (sasResult, error) {
 	var result sasResult
 
 	body, err := json.Marshal(sas{payload, settings.Profile})
@@ -92,9 +90,9 @@ func getSAS(payload string, settings Settings, credentials Credentials) (sasResu
 		return result, err
 	}
 	request.Header.Add("Content-Type", "application/json")
-	request.Header.Add("x-api-key", credentials.APIKey)
-	request.Header.Add("device_id", credentials.DeviceId)
-	request.Header.Add("passkey", credentials.Passkey)
+	request.Header.Add("x-api-key", settings.APIKey)
+	request.Header.Add("device_id", settings.DeviceId)
+	request.Header.Add("passkey", settings.Passkey)
 
 	response, err := HTTPClient.Do(request)
 	if err != nil {
@@ -122,7 +120,7 @@ func getSAS(payload string, settings Settings, credentials Credentials) (sasResu
 	return result, nil
 }
 
-func SendFile(filename string, payloadType string, settings Settings, credentials Credentials) error {
+func SendFile(filename string, payloadType string, settings Settings) error {
 	if settings.Profile == "" {
 		settings.Profile = "default"
 	}
@@ -132,7 +130,7 @@ func SendFile(filename string, payloadType string, settings Settings, credential
 	}
 
 	// payloadType := getType(filename)
-	result, err := getSAS(payloadType, settings, credentials)
+	result, err := getSAS(payloadType, settings)
 	if err != nil {
 		return err
 	}
@@ -214,7 +212,7 @@ func SendFile(filename string, payloadType string, settings Settings, credential
 					} else {
 						currentSize = PartSize
 					}
-					signedURL, err := getSignedURL(result, partNum, settings, credentials)
+					signedURL, err := getSignedURL(result, partNum, settings)
 					if err != nil {
 						return err
 					}
@@ -232,7 +230,7 @@ func SendFile(filename string, payloadType string, settings Settings, credential
 		control.EndpointWG.Wait()
 		close(control.StopChan)
 		if control.HaltTransmitters {
-			result, err := abortMultipartUpload(result, settings, credentials)
+			result, err := abortMultipartUpload(result, settings)
 			if err != nil {
 				return err
 			} else {
@@ -243,7 +241,7 @@ func SendFile(filename string, payloadType string, settings Settings, credential
 			sort.SliceStable(completeMultipartUpload.Parts, func(i, j int) bool {
 				return completeMultipartUpload.Parts[i].PartNumber < completeMultipartUpload.Parts[j].PartNumber
 			})
-			result, err := completeUpload(result, completeMultipartUpload.Parts, settings, credentials)
+			result, err := completeUpload(result, completeMultipartUpload.Parts, settings)
 			if err != nil {
 				return err
 			} else {

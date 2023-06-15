@@ -81,7 +81,7 @@ type TransmitterPayload struct {
 	remaining  int
 }
 
-func getSignedURL(partData sasResult, part int, settings Settings, credentials Credentials) (GetSignedURLMessage, error) {
+func getSignedURL(partData sasResult, part int, settings Settings) (GetSignedURLMessage, error) {
 	var result GetSignedURLMessage
 	body, err := json.Marshal(GetSignedURL{"GET_SIGNED_URL", partData.Key, partData.UploadId, part})
 	if err != nil {
@@ -97,9 +97,9 @@ func getSignedURL(partData sasResult, part int, settings Settings, credentials C
 		return result, err
 	}
 	request.Header.Add("Content-Type", "application/json")
-	request.Header.Add("x-api-key", credentials.APIKey)
-	request.Header.Add("device_id", credentials.DeviceId)
-	request.Header.Add("passkey", credentials.Passkey)
+	request.Header.Add("x-api-key", settings.APIKey)
+	request.Header.Add("device_id", settings.DeviceId)
+	request.Header.Add("passkey", settings.Passkey)
 
 	response, err := HTTPClient.Do(request)
 	if err != nil {
@@ -123,7 +123,7 @@ func getSignedURL(partData sasResult, part int, settings Settings, credentials C
 	return result, nil
 }
 
-func completeUpload(partData sasResult, parts []Parts, settings Settings, credentials Credentials) (CompleteMultipartUploadMessage, error) {
+func completeUpload(partData sasResult, parts []Parts, settings Settings) (CompleteMultipartUploadMessage, error) {
 	var result CompleteMultipartUploadMessage
 	body, err := json.Marshal(CompleteMultipartUpload{"COMPLETE_MULTIPART_UPLOAD", partData.Key, partData.UploadId, parts})
 	if err != nil {
@@ -139,9 +139,9 @@ func completeUpload(partData sasResult, parts []Parts, settings Settings, creden
 		return result, err
 	}
 	request.Header.Add("Content-Type", "application/json")
-	request.Header.Add("x-api-key", credentials.APIKey)
-	request.Header.Add("device_id", credentials.DeviceId)
-	request.Header.Add("passkey", credentials.Passkey)
+	request.Header.Add("x-api-key", settings.APIKey)
+	request.Header.Add("device_id", settings.DeviceId)
+	request.Header.Add("passkey", settings.Passkey)
 
 	response, err := HTTPClient.Do(request)
 	if err != nil {
@@ -165,7 +165,7 @@ func completeUpload(partData sasResult, parts []Parts, settings Settings, creden
 	return result, nil
 }
 
-func abortMultipartUpload(partData sasResult, settings Settings, credentials Credentials) (AbortMultipartUploadMessage, error) {
+func abortMultipartUpload(partData sasResult, settings Settings) (AbortMultipartUploadMessage, error) {
 	var result AbortMultipartUploadMessage
 	body, err := json.Marshal(AbortMultipartUpload{"ABORT_MULTIPART_UPLOAD", partData.Key, partData.UploadId})
 	if err != nil {
@@ -181,9 +181,9 @@ func abortMultipartUpload(partData sasResult, settings Settings, credentials Cre
 		return result, err
 	}
 	request.Header.Add("Content-Type", "application/json")
-	request.Header.Add("x-api-key", credentials.APIKey)
-	request.Header.Add("device_id", credentials.DeviceId)
-	request.Header.Add("passkey", credentials.Passkey)
+	request.Header.Add("x-api-key", settings.APIKey)
+	request.Header.Add("device_id", settings.DeviceId)
+	request.Header.Add("passkey", settings.Passkey)
 
 	response, err := HTTPClient.Do(request)
 	if err != nil {
