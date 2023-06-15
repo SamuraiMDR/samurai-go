@@ -25,8 +25,11 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func NewTransmitterSettings(configFile string) (transmitter.Settings, error) {
-	settings := transmitter.Settings{
+type transmitterSettings transmitter.Settings
+type transmitterCredentials transmitter.Credentials
+
+func NewTransmitterSettings(configFile string) (transmitterSettings, error) {
+	settings := transmitterSettings{
 		Debug:   false,
 		Profile: "default",
 		URL:     "",
@@ -35,25 +38,25 @@ func NewTransmitterSettings(configFile string) (transmitter.Settings, error) {
 	if configFile != "" {
 		data, err := os.ReadFile(filepath.Clean(configFile))
 		if err != nil {
-			return transmitter.Settings{}, err
+			return transmitterSettings{}, err
 		}
 
 		err = yaml.Unmarshal(data, &settings)
 		if err != nil {
-			return transmitter.Settings{}, err
+			return transmitterSettings{}, err
 		}
 	} else {
-		return transmitter.Settings{}, fmt.Errorf("settings file path is required")
+		return settings, fmt.Errorf("settings file path is required")
 	}
 
-	err := ValidateSettings(settings)
+	err := settings.Validate()
 	if err != nil {
-		return transmitter.Settings{}, err
+		return transmitterSettings{}, err
 	}
 	return settings, nil
 }
 
-func ValidateSettings(settings transmitter.Settings) error {
+func (settings *transmitterSettings) Validate() error {
 	checks := []struct {
 		bad    bool
 		errMsg string
@@ -70,8 +73,8 @@ func ValidateSettings(settings transmitter.Settings) error {
 	return nil
 }
 
-func NewTransmitterCredentials(configFile string) (transmitter.Credentials, error) {
-	credentials := transmitter.Credentials{
+func NewTransmitterCredentials(configFile string) (transmitterCredentials, error) {
+	credentials := transmitterCredentials{
 		APIKey:   "",
 		Passkey:  "",
 		DeviceId: "",
@@ -80,25 +83,25 @@ func NewTransmitterCredentials(configFile string) (transmitter.Credentials, erro
 	if configFile != "" {
 		data, err := os.ReadFile(filepath.Clean(configFile))
 		if err != nil {
-			return transmitter.Credentials{}, err
+			return transmitterCredentials{}, err
 		}
 
 		err = yaml.Unmarshal(data, &credentials)
 		if err != nil {
-			return transmitter.Credentials{}, err
+			return transmitterCredentials{}, err
 		}
 	} else {
-		return transmitter.Credentials{}, fmt.Errorf("settings file path is required")
+		return transmitterCredentials{}, fmt.Errorf("settings file path is required")
 	}
 
-	err := ValidateCredentials(credentials)
+	err := credentials.Validate()
 	if err != nil {
-		return transmitter.Credentials{}, err
+		return transmitterCredentials{}, err
 	}
 	return credentials, nil
 }
 
-func ValidateCredentials(credentials transmitter.Credentials) error {
+func (credentials *transmitterCredentials) Validate() error {
 	checks := []struct {
 		bad    bool
 		errMsg string
