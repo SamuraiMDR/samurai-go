@@ -21,18 +21,15 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/NTTS-Innovation/samurai-go/pkg/credentials"
 	"github.com/NTTS-Innovation/samurai-go/pkg/transmitter"
 	"gopkg.in/yaml.v2"
 )
 
 func NewTransmitterSettings(configFile string) (transmitter.Settings, error) {
 	settings := transmitter.Settings{
-		Debug:    false,
-		Profile:  "default",
-		URL:      "",
-		APIKey:   "",
-		Passkey:  "",
-		DeviceId: "",
+		Debug:   false,
+		Profile: "default",
 	}
 
 	if configFile != "" {
@@ -49,28 +46,72 @@ func NewTransmitterSettings(configFile string) (transmitter.Settings, error) {
 		return transmitter.Settings{}, fmt.Errorf("settings file path is required")
 	}
 
-	err := Validate(settings)
+	err := validateSettings(settings)
 	if err != nil {
 		return transmitter.Settings{}, err
 	}
 	return settings, nil
 }
 
-func Validate(settings transmitter.Settings) error {
+func validateSettings(settings transmitter.Settings) error {
 	checks := []struct {
 		bad    bool
 		errMsg string
 	}{
 		{settings.Profile == "", "no profile defined, example 'default'"},
-		{settings.URL == "", "URL not defined"},
-		{settings.APIKey == "", "apiKey is undefined"},
-		{settings.DeviceId == "", "deviceId is undefined"},
-		{settings.Passkey == "", "passkey is undefined"},
 	}
 
 	for _, check := range checks {
 		if check.bad {
 			return fmt.Errorf("invalid settings: %s", check.errMsg)
+		}
+	}
+	return nil
+}
+
+func NewTransmitterCredentials(configFile string) (credentials.APICredentials, error) {
+	cred := credentials.APICredentials{
+		URL:      "",
+		APIKey:   "",
+		Passkey:  "",
+		DeviceId: "",
+	}
+
+	if configFile != "" {
+		data, err := os.ReadFile(filepath.Clean(configFile))
+		if err != nil {
+			return credentials.APICredentials{}, err
+		}
+
+		err = yaml.Unmarshal(data, &cred)
+		if err != nil {
+			return credentials.APICredentials{}, err
+		}
+	} else {
+		return credentials.APICredentials{}, fmt.Errorf("settings file path is required")
+	}
+
+	err := validateCredentials(cred)
+	if err != nil {
+		return credentials.APICredentials{}, err
+	}
+	return cred, nil
+}
+
+func validateCredentials(cred credentials.APICredentials) error {
+	checks := []struct {
+		bad    bool
+		errMsg string
+	}{
+		{cred.URL == "", "URL not defined"},
+		{cred.APIKey == "", "apiKey is undefined"},
+		{cred.DeviceId == "", "deviceId is undefined"},
+		{cred.Passkey == "", "passkey is undefined"},
+	}
+
+	for _, check := range checks {
+		if check.bad {
+			return fmt.Errorf("invalid credentials: %s", check.errMsg)
 		}
 	}
 	return nil

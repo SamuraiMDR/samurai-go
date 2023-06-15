@@ -23,6 +23,7 @@ go.work
 # Settings and credentials
 **/config.yaml
 **/cred.yaml
+**/credentials.yaml
 
 # Example transmitter
 examples/transmitter/transmitter

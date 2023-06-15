@@ -29,18 +29,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/NTTS-Innovation/samurai-go/pkg/credentials"
 	"github.com/inhies/go-bytesize"
 	log "github.com/sirupsen/logrus"
 )
 
 type Settings struct {
-	URL              string `yaml:"url"`
 	allowInsecureTLS bool   `yaml:"insecure"`
 	Debug            bool   `yaml:"debug"`
 	Profile          string `yaml:"profile"`
-	APIKey           string `yaml:"apiKey"`
-	Passkey          string `yaml:"passkey"`
-	DeviceId         string `yaml:"deviceId"`
 }
 
 type control struct {
@@ -72,7 +69,7 @@ type sasResult struct {
 //	return filepath.Base(dir)
 //}
 
-func getSAS(payload string, settings Settings) (sasResult, error) {
+func getSAS(payload string, credentials credentials.APICredentials, settings Settings) (sasResult, error) {
 	var result sasResult
 
 	body, err := json.Marshal(sas{payload, settings.Profile})
@@ -85,14 +82,14 @@ func getSAS(payload string, settings Settings) (sasResult, error) {
 	}
 
 	defer HTTPClient.CloseIdleConnections()
-	request, err := http.NewRequest("POST", settings.URL+"/cts/payload", bytes.NewBuffer(body))
+	request, err := http.NewRequest("POST", credentials.URL+"/cts/payload", bytes.NewBuffer(body))
 	if err != nil {
 		return result, err
 	}
 	request.Header.Add("Content-Type", "application/json")
-	request.Header.Add("x-api-key", settings.APIKey)
-	request.Header.Add("device_id", settings.DeviceId)
-	request.Header.Add("passkey", settings.Passkey)
+	request.Header.Add("x-api-key", credentials.APIKey)
+	request.Header.Add("device_id", credentials.DeviceId)
+	request.Header.Add("passkey", credentials.Passkey)
 
 	response, err := HTTPClient.Do(request)
 	if err != nil {
@@ -120,7 +117,7 @@ func getSAS(payload string, settings Settings) (sasResult, error) {
 	return result, nil
 }
 
-func SendFile(filename string, payloadType string, settings Settings) error {
+func SendFile(filename string, payloadType string, credentials credentials.APICredentials, settings Settings) error {
 	if settings.Profile == "" {
 		settings.Profile = "default"
 	}
@@ -130,7 +127,7 @@ func SendFile(filename string, payloadType string, settings Settings) error {
 	}
 
 	// payloadType := getType(filename)
-	result, err := getSAS(payloadType, settings)
+	result, err := getSAS(payloadType, credentials, settings)
 	if err != nil {
 		return err
 	}
@@ -212,7 +209,7 @@ func SendFile(filename string, payloadType string, settings Settings) error {
 					} else {
 						currentSize = PartSize
 					}
-					signedURL, err := getSignedURL(result, partNum, settings)
+					signedURL, err := getSignedURL(result, partNum, credentials, settings)
 					if err != nil {
 						return err
 					}
@@ -230,7 +227,7 @@ func SendFile(filename string, payloadType string, settings Settings) error {
 		control.EndpointWG.Wait()
 		close(control.StopChan)
 		if control.HaltTransmitters {
-			result, err := abortMultipartUpload(result, settings)
+			result, err := abortMultipartUpload(result, credentials, settings)
 			if err != nil {
 				return err
 			} else {
@@ -241,7 +238,7 @@ func SendFile(filename string, payloadType string, settings Settings) error {
 			sort.SliceStable(completeMultipartUpload.Parts, func(i, j int) bool {
 				return completeMultipartUpload.Parts[i].PartNumber < completeMultipartUpload.Parts[j].PartNumber
 			})
-			result, err := completeUpload(result, completeMultipartUpload.Parts, settings)
+			result, err := completeUpload(result, completeMultipartUpload.Parts, credentials, settings)
 			if err != nil {
 				return err
 			} else {

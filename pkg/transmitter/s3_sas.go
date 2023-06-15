@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/NTTS-Innovation/samurai-go/pkg/credentials"
 	"github.com/inhies/go-bytesize"
 	log "github.com/sirupsen/logrus"
 )
@@ -81,7 +82,7 @@ type TransmitterPayload struct {
 	remaining  int
 }
 
-func getSignedURL(partData sasResult, part int, settings Settings) (GetSignedURLMessage, error) {
+func getSignedURL(partData sasResult, part int, credentials credentials.APICredentials, settings Settings) (GetSignedURLMessage, error) {
 	var result GetSignedURLMessage
 	body, err := json.Marshal(GetSignedURL{"GET_SIGNED_URL", partData.Key, partData.UploadId, part})
 	if err != nil {
@@ -92,14 +93,14 @@ func getSignedURL(partData sasResult, part int, settings Settings) (GetSignedURL
 	}
 
 	defer HTTPClient.CloseIdleConnections()
-	request, err := http.NewRequest("POST", settings.URL+"/cts/payload", bytes.NewBuffer(body))
+	request, err := http.NewRequest("POST", credentials.URL+"/cts/payload", bytes.NewBuffer(body))
 	if err != nil {
 		return result, err
 	}
 	request.Header.Add("Content-Type", "application/json")
-	request.Header.Add("x-api-key", settings.APIKey)
-	request.Header.Add("device_id", settings.DeviceId)
-	request.Header.Add("passkey", settings.Passkey)
+	request.Header.Add("x-api-key", credentials.APIKey)
+	request.Header.Add("device_id", credentials.DeviceId)
+	request.Header.Add("passkey", credentials.Passkey)
 
 	response, err := HTTPClient.Do(request)
 	if err != nil {
@@ -123,7 +124,7 @@ func getSignedURL(partData sasResult, part int, settings Settings) (GetSignedURL
 	return result, nil
 }
 
-func completeUpload(partData sasResult, parts []Parts, settings Settings) (CompleteMultipartUploadMessage, error) {
+func completeUpload(partData sasResult, parts []Parts, credentials credentials.APICredentials, settings Settings) (CompleteMultipartUploadMessage, error) {
 	var result CompleteMultipartUploadMessage
 	body, err := json.Marshal(CompleteMultipartUpload{"COMPLETE_MULTIPART_UPLOAD", partData.Key, partData.UploadId, parts})
 	if err != nil {
@@ -134,14 +135,14 @@ func completeUpload(partData sasResult, parts []Parts, settings Settings) (Compl
 	}
 
 	defer HTTPClient.CloseIdleConnections()
-	request, err := http.NewRequest("POST", settings.URL+"/cts/payload", bytes.NewBuffer(body))
+	request, err := http.NewRequest("POST", credentials.URL+"/cts/payload", bytes.NewBuffer(body))
 	if err != nil {
 		return result, err
 	}
 	request.Header.Add("Content-Type", "application/json")
-	request.Header.Add("x-api-key", settings.APIKey)
-	request.Header.Add("device_id", settings.DeviceId)
-	request.Header.Add("passkey", settings.Passkey)
+	request.Header.Add("x-api-key", credentials.APIKey)
+	request.Header.Add("device_id", credentials.DeviceId)
+	request.Header.Add("passkey", credentials.Passkey)
 
 	response, err := HTTPClient.Do(request)
 	if err != nil {
@@ -165,7 +166,7 @@ func completeUpload(partData sasResult, parts []Parts, settings Settings) (Compl
 	return result, nil
 }
 
-func abortMultipartUpload(partData sasResult, settings Settings) (AbortMultipartUploadMessage, error) {
+func abortMultipartUpload(partData sasResult, credentials credentials.APICredentials, settings Settings) (AbortMultipartUploadMessage, error) {
 	var result AbortMultipartUploadMessage
 	body, err := json.Marshal(AbortMultipartUpload{"ABORT_MULTIPART_UPLOAD", partData.Key, partData.UploadId})
 	if err != nil {
@@ -176,14 +177,14 @@ func abortMultipartUpload(partData sasResult, settings Settings) (AbortMultipart
 	}
 
 	defer HTTPClient.CloseIdleConnections()
-	request, err := http.NewRequest("POST", settings.URL+"/cts/payload", bytes.NewBuffer(body))
+	request, err := http.NewRequest("POST", credentials.URL+"/cts/payload", bytes.NewBuffer(body))
 	if err != nil {
 		return result, err
 	}
 	request.Header.Add("Content-Type", "application/json")
-	request.Header.Add("x-api-key", settings.APIKey)
-	request.Header.Add("device_id", settings.DeviceId)
-	request.Header.Add("passkey", settings.Passkey)
+	request.Header.Add("x-api-key", credentials.APIKey)
+	request.Header.Add("device_id", credentials.DeviceId)
+	request.Header.Add("passkey", credentials.Passkey)
 
 	response, err := HTTPClient.Do(request)
 	if err != nil {

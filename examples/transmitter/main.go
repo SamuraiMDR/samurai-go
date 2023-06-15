@@ -33,6 +33,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	credFile := "credentials.yaml"
+	creds, err := config.NewTransmitterCredentials(credFile)
+	if err != nil {
+		log.Fatal(err)
+	}
 	if len(os.Args) == 3 {
 		filename = os.Args[1]
 		payloadType = os.Args[2]
@@ -42,7 +47,7 @@ func main() {
 	} else {
 		log.Fatalln("filename or payload argument is missing")
 	}
-	err = transmitter.SendFile(filename, payloadType, settings)
+	err = transmitter.SendFile(filename, payloadType, creds, settings)
 	if err != nil {
 		log.Fatal(err)
 	}
