@@ -64,7 +64,7 @@ type sas struct {
 
 type sasResult struct {
 	SASURL   string `json:"sas_url"`
-	Type     string `json:"target_type"`
+	Type     string `json:"profile_type"`
 	Key      string `json:"key"`
 	UploadId string `json:"upload_id"`
 }
