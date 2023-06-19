@@ -3,7 +3,7 @@
 ------
 # Samurai Go client SDK
 
-The Samurai Go SDK provied simple APIs to interact with NTT Security Holdings Samurai MDR service
+The Samurai Go SDK provies simple APIs to interact with NTT Security Holdings Samurai MDR service
 
 Examples of how to use the SDK is provided in the examples folder
 
