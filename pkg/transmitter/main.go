@@ -81,7 +81,6 @@ func getSAS(payload string, credentials credentials.APICredentials, settings Set
 	if err != nil {
 		return result, err
 	}
-	log.Infof(string(body))
 	HTTPClient := &http.Client{
 		Timeout: time.Second * 10,
 	}
