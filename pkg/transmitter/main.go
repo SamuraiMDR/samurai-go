@@ -149,6 +149,7 @@ func (client Client) SendFile(filename string, payloadType string) error {
 	} else if err != nil {
 		return fmt.Errorf("unknown error from backend: %v", err)
 	}
+	log.Debugf("Got signed url for %v: %v", filename, result.SASURL)
 	if result.Type == "azure" {
 		uploadToAzureSAS(filename, result.SASURL, client.settings)
 	} else if result.Type == "s3" {
