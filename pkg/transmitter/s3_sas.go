@@ -29,62 +29,57 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var PartSize = 100 * 1024 * 1024 // 5 Mb (5 Mb is AWS S3 minimum value)
-var PartsTransmitterWorkers = 3
-var MaxRetry = 3
+var partSize = 100 * 1024 * 1024 // 5 Mb (5 Mb is AWS S3 minimum value)
+var partsTransmitterWorkers = 3
+var maxRetry = 3
 
-type Parts struct {
+type parts struct {
 	ETag       string `json:"ETag"`
 	PartNumber int    `json:"PartNumber"`
 }
 
-type CreateMultipartUpload struct {
-	Payload   string `json:"payload"`
-	EventType string `json:"event_type"`
-}
-
-type CompleteMultipartUpload struct {
+type completeMultipartUpload struct {
 	EventType string  `json:"event_type"`
 	Key       string  `json:"key"`
 	UploadId  string  `json:"upload_id"`
-	Parts     []Parts `json:"parts"`
+	Parts     []parts `json:"parts"`
 }
 
-type CompleteMultipartUploadMessage struct {
+type completeMultipartUploadMessage struct {
 	Message string `json:"Message"`
 }
 
-type AbortMultipartUpload struct {
+type abortedMultipartUpload struct {
 	EventType string `json:"event_type"`
 	Key       string `json:"key"`
 	UploadId  string `json:"upload_id"`
 }
 
-type AbortMultipartUploadMessage struct {
+type abortMultipartUploadMessage struct {
 	Message string `json:"Message"`
 }
 
-type GetSignedURL struct {
+type signedURL struct {
 	EventType string `json:"event_type"`
 	Key       string `json:"key"`
 	UploadId  string `json:"upload_id"`
 	Part      int    `json:"part"`
 }
 
-type GetSignedURLMessage struct {
+type signedURLMessage struct {
 	SignedURL string `json:"signed_url"`
 }
 
-type TransmitterPayload struct {
+type transmitterPayload struct {
 	signed_url string
 	chunk      io.Reader
 	partNum    int
 	remaining  int
 }
 
-func getSignedURL(partData sasResult, part int, credentials credentials.APICredentials, settings Settings) (GetSignedURLMessage, error) {
-	var result GetSignedURLMessage
-	body, err := json.Marshal(GetSignedURL{"GET_SIGNED_URL", partData.Key, partData.UploadId, part})
+func getSignedURL(partData sasResult, part int, credentials credentials.APICredentials, settings Settings) (signedURLMessage, error) {
+	var result signedURLMessage
+	body, err := json.Marshal(signedURL{"GET_SIGNED_URL", partData.Key, partData.UploadId, part})
 	if err != nil {
 		return result, err
 	}
@@ -124,9 +119,9 @@ func getSignedURL(partData sasResult, part int, credentials credentials.APICrede
 	return result, nil
 }
 
-func completeUpload(partData sasResult, parts []Parts, credentials credentials.APICredentials, settings Settings) (CompleteMultipartUploadMessage, error) {
-	var result CompleteMultipartUploadMessage
-	body, err := json.Marshal(CompleteMultipartUpload{"COMPLETE_MULTIPART_UPLOAD", partData.Key, partData.UploadId, parts})
+func completeUpload(partData sasResult, parts []parts, credentials credentials.APICredentials, settings Settings) (completeMultipartUploadMessage, error) {
+	var result completeMultipartUploadMessage
+	body, err := json.Marshal(completeMultipartUpload{"COMPLETE_MULTIPART_UPLOAD", partData.Key, partData.UploadId, parts})
 	if err != nil {
 		return result, err
 	}
@@ -166,9 +161,9 @@ func completeUpload(partData sasResult, parts []Parts, credentials credentials.A
 	return result, nil
 }
 
-func abortMultipartUpload(partData sasResult, credentials credentials.APICredentials, settings Settings) (AbortMultipartUploadMessage, error) {
-	var result AbortMultipartUploadMessage
-	body, err := json.Marshal(AbortMultipartUpload{"ABORT_MULTIPART_UPLOAD", partData.Key, partData.UploadId})
+func abortMultipartUpload(partData sasResult, credentials credentials.APICredentials, settings Settings) (abortMultipartUploadMessage, error) {
+	var result abortMultipartUploadMessage
+	body, err := json.Marshal(abortedMultipartUpload{"ABORT_MULTIPART_UPLOAD", partData.Key, partData.UploadId})
 	if err != nil {
 		return result, err
 	}
@@ -208,9 +203,9 @@ func abortMultipartUpload(partData sasResult, credentials credentials.APICredent
 	return result, nil
 }
 
-func partsTransmitter(ChunkChan <-chan TransmitterPayload, control control, threadNr int) {
+func partsTransmitter(ChunkChan <-chan transmitterPayload, control control, threadNr int) {
 	for part := range ChunkChan {
-		for i := 0; i <= MaxRetry; i++ {
+		for i := 0; i <= maxRetry; i++ {
 			if control.HaltTransmitters {
 				control.PartsChan <- nil
 				return
@@ -220,14 +215,14 @@ func partsTransmitter(ChunkChan <-chan TransmitterPayload, control control, thre
 			} else {
 				log.Warnf("  ... resending part %v, try %v \n", part.partNum, i)
 			}
-			parts := Parts{}
+			parts := parts{}
 			HTTPClient := &http.Client{Timeout: time.Second * 600}
 
 			request, err := http.NewRequest(http.MethodPut, part.signed_url, part.chunk)
 			if err != nil {
 				log.Errorln(err)
 				HTTPClient.CloseIdleConnections()
-				if i >= MaxRetry {
+				if i >= maxRetry {
 					log.Errorf("Aborting upload due to max retries for part %v has been reached", part.partNum)
 					control.HaltTransmitters = true
 				}
@@ -236,7 +231,7 @@ func partsTransmitter(ChunkChan <-chan TransmitterPayload, control control, thre
 				if err != nil {
 					log.Errorln(err)
 					HTTPClient.CloseIdleConnections()
-					if i >= MaxRetry {
+					if i >= maxRetry {
 						log.Errorf("Aborting upload due to max retries for part %v has been reached", part.partNum)
 						control.HaltTransmitters = true
 					}

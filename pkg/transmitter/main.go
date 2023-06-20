@@ -153,7 +153,7 @@ func (client Client) SendFile(filename string, payloadType string) error {
 	if result.Type == "azure" {
 		uploadToAzureSAS(filename, result.SASURL, client.settings)
 	} else if result.Type == "s3" {
-		var completeMultipartUpload CompleteMultipartUpload
+		var completeMultipartUpload completeMultipartUpload
 		var control = control{
 			EndpointWG:       &sync.WaitGroup{},
 			StopChan:         make(chan struct{}),
@@ -186,9 +186,9 @@ func (client Client) SendFile(filename string, payloadType string) error {
 		completeMultipartUpload.UploadId = result.UploadId
 
 		// Create channel for chunks to handle
-		ChunkChan := make(chan TransmitterPayload, PartsTransmitterWorkers)
+		ChunkChan := make(chan transmitterPayload, partsTransmitterWorkers)
 		// Start workers
-		for i := 0; i < PartsTransmitterWorkers; i++ {
+		for i := 0; i < partsTransmitterWorkers; i++ {
 			//log.Infoln("Starting transmitter worker " + strconv.Itoa(i))
 			go partsTransmitter(ChunkChan, control, i)
 		}
@@ -200,8 +200,8 @@ func (client Client) SendFile(filename string, payloadType string) error {
 					if partsOrErr == nil {
 						control.EndpointWG.Done()
 					} else {
-						log.Debugf("  ... transfer part %v completed", partsOrErr.(Parts).PartNumber)
-						completeMultipartUpload.Parts = append(completeMultipartUpload.Parts, partsOrErr.(Parts))
+						log.Debugf("  ... transfer part %v completed", partsOrErr.(parts).PartNumber)
+						completeMultipartUpload.Parts = append(completeMultipartUpload.Parts, partsOrErr.(parts))
 						control.EndpointWG.Done()
 					}
 				case <-control.StopChan:
@@ -211,16 +211,16 @@ func (client Client) SendFile(filename string, payloadType string) error {
 			}
 		}()
 
-		for start = 0; remaining > 0; start += PartSize {
+		for start = 0; remaining > 0; start += partSize {
 			for {
 				if control.HaltTransmitters {
 					break
 				}
-				if len(ChunkChan) < PartsTransmitterWorkers {
-					if remaining < PartSize {
+				if len(ChunkChan) < partsTransmitterWorkers {
+					if remaining < partSize {
 						currentSize = remaining
 					} else {
-						currentSize = PartSize
+						currentSize = partSize
 					}
 					signedURL, err := getSignedURL(result, partNum, client.credentials, client.settings)
 					if err != nil {
@@ -228,7 +228,7 @@ func (client Client) SendFile(filename string, payloadType string) error {
 					}
 					control.EndpointWG.Add(1)
 					remaining -= currentSize
-					ChunkChan <- TransmitterPayload{signedURL.SignedURL, bytes.NewReader(buffer[start : start+currentSize]), partNum, remaining}
+					ChunkChan <- transmitterPayload{signedURL.SignedURL, bytes.NewReader(buffer[start : start+currentSize]), partNum, remaining}
 					partNum++
 					break
 				} else {
