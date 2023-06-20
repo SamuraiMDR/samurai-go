@@ -35,7 +35,7 @@ import (
 )
 
 type Settings struct {
-	allowInsecureTLS bool   `yaml:"insecure"`
+	AllowInsecureTLS bool   `yaml:"insecure"`
 	Debug            bool   `yaml:"debug"`
 	Profile          string `yaml:"profile"`
 }
@@ -135,8 +135,8 @@ func (client Client) SendFile(filename string, payloadType string) error {
 		client.settings.Profile = "default"
 	}
 
-	if client.settings.allowInsecureTLS {
-		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: client.settings.allowInsecureTLS}
+	if client.settings.AllowInsecureTLS {
+		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: client.settings.AllowInsecureTLS}
 	}
 
 	// payloadType := getType(filename)
