@@ -64,6 +64,11 @@ type sasResult struct {
 	UploadId string `json:"upload_id"`
 }
 
+type Client struct {
+	credentials credentials.APICredentials
+	settings    Settings
+}
+
 //func getType(filename string) string {
 //	dir := filepath.Dir(filename)
 //	return filepath.Base(dir)
@@ -117,17 +122,25 @@ func getSAS(payload string, credentials credentials.APICredentials, settings Set
 	return result, nil
 }
 
-func SendFile(filename string, payloadType string, credentials credentials.APICredentials, settings Settings) error {
-	if settings.Profile == "" {
-		settings.Profile = "default"
+func NewClient(settings Settings, credentials credentials.APICredentials) (Client, error) {
+	client := Client{
+		settings:    settings,
+		credentials: credentials,
+	}
+	return client, nil
+}
+
+func (client Client) SendFile(filename string, payloadType string) error {
+	if client.settings.Profile == "" {
+		client.settings.Profile = "default"
 	}
 
-	if settings.allowInsecureTLS {
-		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: settings.allowInsecureTLS}
+	if client.settings.allowInsecureTLS {
+		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: client.settings.allowInsecureTLS}
 	}
 
 	// payloadType := getType(filename)
-	result, err := getSAS(payloadType, credentials, settings)
+	result, err := getSAS(payloadType, client.credentials, client.settings)
 	if err != nil {
 		return err
 	}
@@ -138,7 +151,7 @@ func SendFile(filename string, payloadType string, credentials credentials.APICr
 		return fmt.Errorf("unknown error from backend: %v", err)
 	}
 	if result.Type == "azure" {
-		uploadToAzureSAS(filename, result.SASURL, settings)
+		uploadToAzureSAS(filename, result.SASURL, client.settings)
 	} else if result.Type == "s3" {
 		var completeMultipartUpload CompleteMultipartUpload
 		var control = control{
@@ -209,7 +222,7 @@ func SendFile(filename string, payloadType string, credentials credentials.APICr
 					} else {
 						currentSize = PartSize
 					}
-					signedURL, err := getSignedURL(result, partNum, credentials, settings)
+					signedURL, err := getSignedURL(result, partNum, client.credentials, client.settings)
 					if err != nil {
 						return err
 					}
@@ -227,7 +240,7 @@ func SendFile(filename string, payloadType string, credentials credentials.APICr
 		control.EndpointWG.Wait()
 		close(control.StopChan)
 		if control.HaltTransmitters {
-			result, err := abortMultipartUpload(result, credentials, settings)
+			result, err := abortMultipartUpload(result, client.credentials, client.settings)
 			if err != nil {
 				return err
 			} else {
@@ -238,7 +251,7 @@ func SendFile(filename string, payloadType string, credentials credentials.APICr
 			sort.SliceStable(completeMultipartUpload.Parts, func(i, j int) bool {
 				return completeMultipartUpload.Parts[i].PartNumber < completeMultipartUpload.Parts[j].PartNumber
 			})
-			result, err := completeUpload(result, completeMultipartUpload.Parts, credentials, settings)
+			result, err := completeUpload(result, completeMultipartUpload.Parts, client.credentials, client.settings)
 			if err != nil {
 				return err
 			} else {

@@ -47,7 +47,13 @@ func main() {
 	} else {
 		log.Fatalln("filename or payload argument is missing")
 	}
-	err = transmitter.SendFile(filename, payloadType, creds, settings)
+
+	client, err := transmitter.NewClient(settings, creds)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = client.SendFile(filename, payloadType)
 	if err != nil {
 		log.Fatal(err)
 	}
