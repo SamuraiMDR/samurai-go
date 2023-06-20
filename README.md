@@ -13,7 +13,7 @@ Transmitter client uploads a selected set of file types (payloads) to Samurai MD
 
 ### Installation
 ```
-go get github.com/NTTS-Innovation/samurai-go@v0.0.3
+go get github.com/NTTS-Innovation/samurai-go@v0.0.4
 ```
 
 ### Usage
@@ -43,7 +43,12 @@ func main() {
 		Profile: "default",
 	}
 
-	err := transmitter.SendFile(filename, payloadType, credentials, settings)
+	client, err := transmitter.NewClient(settings, credentials)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err := client.SendFile(filename, payloadType)
 	if err != nil {
 		log.Fatal(err)
 	}
