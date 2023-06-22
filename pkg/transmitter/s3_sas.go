@@ -77,20 +77,15 @@ type transmitterPayload struct {
 	remaining  int
 }
 
-func getSignedURL(partData sasResult, part int, credentials credentials.APICredentials, settings Settings) (signedURLMessage, error) {
-	var result signedURLMessage
-	body, err := json.Marshal(signedURL{"GET_SIGNED_URL", partData.Key, partData.UploadId, part})
-	if err != nil {
-		return result, err
-	}
+func sendRequest(body []byte, credentials credentials.APICredentials) ([]byte, error) {
 	HTTPClient := &http.Client{
 		Timeout: time.Second * 10,
 	}
-
 	defer HTTPClient.CloseIdleConnections()
+
 	request, err := http.NewRequest("POST", credentials.URL+"/cts/payload", bytes.NewBuffer(body))
 	if err != nil {
-		return result, err
+		return nil, err
 	}
 	request.Header.Add("Content-Type", "application/json")
 	request.Header.Add("x-api-key", credentials.APIKey)
@@ -99,21 +94,40 @@ func getSignedURL(partData sasResult, part int, credentials credentials.APICrede
 
 	response, err := HTTPClient.Do(request)
 	if err != nil {
-		return result, err
+		return nil, err
 	}
 	defer response.Body.Close()
+
 	bodyBytes, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.StatusCode != 200 {
+		err := fmt.Errorf("status code: %d\n%v", response.StatusCode, string(bodyBytes))
+		return nil, err
+	}
+
+	return bodyBytes, nil
+}
+
+func getSignedURL(partData sasResult, part int, credentials credentials.APICredentials, settings Settings) (signedURLMessage, error) {
+	var result signedURLMessage
+	body, err := json.Marshal(signedURL{"GET_SIGNED_URL", partData.Key, partData.UploadId, part})
 	if err != nil {
 		return result, err
 	}
-	if response.StatusCode != 200 {
-		err := fmt.Errorf("status code: %d\n%v", response.StatusCode, string(bodyBytes))
+
+	bodyBytes, err := sendRequest(body, credentials)
+	if err != nil {
 		return result, err
 	}
+
 	err = json.Unmarshal(bodyBytes, &result)
 	if err != nil {
 		return result, err
 	}
+
 	return result, nil
 }
 
@@ -123,37 +137,17 @@ func completeUpload(partData sasResult, parts []parts, credentials credentials.A
 	if err != nil {
 		return result, err
 	}
-	HTTPClient := &http.Client{
-		Timeout: time.Second * 10,
+
+	bodyBytes, err := sendRequest(body, credentials)
+	if err != nil {
+		return result, err
 	}
 
-	defer HTTPClient.CloseIdleConnections()
-	request, err := http.NewRequest("POST", credentials.URL+"/cts/payload", bytes.NewBuffer(body))
-	if err != nil {
-		return result, err
-	}
-	request.Header.Add("Content-Type", "application/json")
-	request.Header.Add("x-api-key", credentials.APIKey)
-	request.Header.Add("device_id", credentials.DeviceId)
-	request.Header.Add("passkey", credentials.Passkey)
-
-	response, err := HTTPClient.Do(request)
-	if err != nil {
-		return result, err
-	}
-	defer response.Body.Close()
-	bodyBytes, err := io.ReadAll(response.Body)
-	if err != nil {
-		return result, err
-	}
-	if response.StatusCode != 200 {
-		err := fmt.Errorf("status code: %d\n%v", response.StatusCode, string(bodyBytes))
-		return result, err
-	}
 	err = json.Unmarshal(bodyBytes, &result)
 	if err != nil {
-		log.Errorln(err)
+		return result, err
 	}
+
 	return result, nil
 }
 
@@ -163,37 +157,17 @@ func abortMultipartUpload(partData sasResult, credentials credentials.APICredent
 	if err != nil {
 		return result, err
 	}
-	HTTPClient := &http.Client{
-		Timeout: time.Second * 10,
+
+	bodyBytes, err := sendRequest(body, credentials)
+	if err != nil {
+		return result, err
 	}
 
-	defer HTTPClient.CloseIdleConnections()
-	request, err := http.NewRequest("POST", credentials.URL+"/cts/payload", bytes.NewBuffer(body))
-	if err != nil {
-		return result, err
-	}
-	request.Header.Add("Content-Type", "application/json")
-	request.Header.Add("x-api-key", credentials.APIKey)
-	request.Header.Add("device_id", credentials.DeviceId)
-	request.Header.Add("passkey", credentials.Passkey)
-
-	response, err := HTTPClient.Do(request)
-	if err != nil {
-		return result, err
-	}
-	defer response.Body.Close()
-	bodyBytes, err := io.ReadAll(response.Body)
-	if err != nil {
-		return result, err
-	}
-	if response.StatusCode != 200 {
-		err := fmt.Errorf("status code: %d\n%v", response.StatusCode, string(bodyBytes))
-		return result, err
-	}
 	err = json.Unmarshal(bodyBytes, &result)
 	if err != nil {
-		log.Errorln(err)
+		return result, err
 	}
+
 	return result, nil
 }
 
