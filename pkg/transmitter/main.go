@@ -98,26 +98,24 @@ func getSAS(payload string, credentials credentials.APICredentials, settings Set
 	response, err := HTTPClient.Do(request)
 	if err != nil {
 		return result, err
-	} else {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
-			log.Errorln(err)
-		}
-		if response.StatusCode == 200 {
-			err := json.Unmarshal(bodyBytes, &result)
-			if err != nil {
-				log.Errorln(err)
-			}
-		} else if response.StatusCode == 415 {
-			return result, errUnknownPayload
-			//		} else if response.StatusCode == 406 {
-			//			return result, ErrCorruptPayload
-		} else {
-			err := fmt.Errorf("status code: %d, Body: %v", response.StatusCode, string(bodyBytes))
-			return result, err
-		}
 	}
 	defer response.Body.Close()
+	bodyBytes, err := io.ReadAll(response.Body)
+	if err != nil {
+		return result, err
+	}
+	switch response.StatusCode {
+	case 200:
+		err := json.Unmarshal(bodyBytes, &result)
+		if err != nil {
+			return result, err
+		}
+	case 415:
+		return result, errUnknownPayload
+	default:
+		err := fmt.Errorf("status code: %d, Body: %v", response.StatusCode, string(bodyBytes))
+		return result, err
+	}
 	return result, nil
 }
 
@@ -140,13 +138,11 @@ func (client Client) SendFile(filename string, payloadType string) error {
 
 	// payloadType := getType(filename)
 	result, err := getSAS(payloadType, client.credentials, client.settings)
-	if err != nil {
-		return err
-	}
 	if err == errUnknownPayload {
 		log.Warnf("Uploading file %v aborted since payload %v is not supported", filename, payloadType)
 		return err
-	} else if err != nil {
+	}
+	if err != nil {
 		return fmt.Errorf("unknown error from backend: %v", err)
 	}
 	if result.Type == "azure" {
