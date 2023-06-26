@@ -39,7 +39,7 @@ func uploadToAzureSAS(filename string, sas string, settings Settings) error {
 	fileSize := stat.Size()
 
 	if settings.Debug {
-		log.Infof("Uploading file %v to %v, total %v", filename, sas, bytesize.ByteSize(fileSize).String())
+		log.Debugf("Uploading file %v to %v, total %v", filename, sas, bytesize.ByteSize(fileSize).String())
 	} else {
 		log.Infof("Uploading file %v, total %v", filename, bytesize.ByteSize(fileSize).String())
 	}
