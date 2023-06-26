@@ -77,20 +77,15 @@ type transmitterPayload struct {
 	remaining  int
 }
 
-func getSignedURL(partData sasResult, part int, credentials credentials.APICredentials, settings Settings) (signedURLMessage, error) {
-	var result signedURLMessage
-	body, err := json.Marshal(signedURL{"GET_SIGNED_URL", partData.Key, partData.UploadId, part})
-	if err != nil {
-		return result, err
-	}
+func sendRequest(body []byte, credentials credentials.APICredentials) ([]byte, error) {
 	HTTPClient := &http.Client{
 		Timeout: time.Second * 10,
 	}
-
 	defer HTTPClient.CloseIdleConnections()
+
 	request, err := http.NewRequest("POST", credentials.URL+"/cts/payload", bytes.NewBuffer(body))
 	if err != nil {
-		return result, err
+		return nil, err
 	}
 	request.Header.Add("Content-Type", "application/json")
 	request.Header.Add("x-api-key", credentials.APIKey)
@@ -99,23 +94,40 @@ func getSignedURL(partData sasResult, part int, credentials credentials.APICrede
 
 	response, err := HTTPClient.Do(request)
 	if err != nil {
-		return result, err
-	} else {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
-			log.Errorln(err)
-		}
-		if response.StatusCode == 200 {
-			err := json.Unmarshal(bodyBytes, &result)
-			if err != nil {
-				log.Errorln(err)
-			}
-		} else {
-			err := fmt.Errorf("status code: %d\n%v", response.StatusCode, string(bodyBytes))
-			return result, err
-		}
+		return nil, err
 	}
 	defer response.Body.Close()
+
+	bodyBytes, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.StatusCode != 200 {
+		err := fmt.Errorf("status code: %d\n%v", response.StatusCode, string(bodyBytes))
+		return nil, err
+	}
+
+	return bodyBytes, nil
+}
+
+func getSignedURL(partData sasResult, part int, credentials credentials.APICredentials, settings Settings) (signedURLMessage, error) {
+	var result signedURLMessage
+	body, err := json.Marshal(signedURL{"GET_SIGNED_URL", partData.Key, partData.UploadId, part})
+	if err != nil {
+		return result, err
+	}
+
+	bodyBytes, err := sendRequest(body, credentials)
+	if err != nil {
+		return result, err
+	}
+
+	err = json.Unmarshal(bodyBytes, &result)
+	if err != nil {
+		return result, err
+	}
+
 	return result, nil
 }
 
@@ -125,39 +137,17 @@ func completeUpload(partData sasResult, parts []parts, credentials credentials.A
 	if err != nil {
 		return result, err
 	}
-	HTTPClient := &http.Client{
-		Timeout: time.Second * 10,
-	}
 
-	defer HTTPClient.CloseIdleConnections()
-	request, err := http.NewRequest("POST", credentials.URL+"/cts/payload", bytes.NewBuffer(body))
+	bodyBytes, err := sendRequest(body, credentials)
 	if err != nil {
 		return result, err
 	}
-	request.Header.Add("Content-Type", "application/json")
-	request.Header.Add("x-api-key", credentials.APIKey)
-	request.Header.Add("device_id", credentials.DeviceId)
-	request.Header.Add("passkey", credentials.Passkey)
 
-	response, err := HTTPClient.Do(request)
+	err = json.Unmarshal(bodyBytes, &result)
 	if err != nil {
 		return result, err
-	} else {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
-			log.Errorln(err)
-		}
-		if response.StatusCode == 200 {
-			err := json.Unmarshal(bodyBytes, &result)
-			if err != nil {
-				log.Errorln(err)
-			}
-		} else {
-			err := fmt.Errorf("status code: %d\n%v", response.StatusCode, string(bodyBytes))
-			return result, err
-		}
 	}
-	defer response.Body.Close()
+
 	return result, nil
 }
 
@@ -167,45 +157,28 @@ func abortMultipartUpload(partData sasResult, credentials credentials.APICredent
 	if err != nil {
 		return result, err
 	}
-	HTTPClient := &http.Client{
-		Timeout: time.Second * 10,
-	}
 
-	defer HTTPClient.CloseIdleConnections()
-	request, err := http.NewRequest("POST", credentials.URL+"/cts/payload", bytes.NewBuffer(body))
+	bodyBytes, err := sendRequest(body, credentials)
 	if err != nil {
 		return result, err
 	}
-	request.Header.Add("Content-Type", "application/json")
-	request.Header.Add("x-api-key", credentials.APIKey)
-	request.Header.Add("device_id", credentials.DeviceId)
-	request.Header.Add("passkey", credentials.Passkey)
 
-	response, err := HTTPClient.Do(request)
+	err = json.Unmarshal(bodyBytes, &result)
 	if err != nil {
 		return result, err
-	} else {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
-			log.Errorln(err)
-		}
-		if response.StatusCode == 200 {
-			err := json.Unmarshal(bodyBytes, &result)
-			if err != nil {
-				log.Errorln(err)
-			}
-		} else {
-			err := fmt.Errorf("status code: %d\n%v", response.StatusCode, string(bodyBytes))
-			return result, err
-		}
 	}
-	defer response.Body.Close()
+
 	return result, nil
 }
 
 func partsTransmitter(ChunkChan <-chan transmitterPayload, control control, threadNr int) {
 	for part := range ChunkChan {
 		for i := 0; i <= maxRetry; i++ {
+			if i >= maxRetry {
+				log.Errorf("Aborting upload due to max retries for part %v has been reached", part.partNum)
+				control.HaltTransmitters = true
+			}
+
 			if control.HaltTransmitters {
 				control.PartsChan <- nil
 				return
@@ -222,27 +195,18 @@ func partsTransmitter(ChunkChan <-chan transmitterPayload, control control, thre
 			if err != nil {
 				log.Errorln(err)
 				HTTPClient.CloseIdleConnections()
-				if i >= maxRetry {
-					log.Errorf("Aborting upload due to max retries for part %v has been reached", part.partNum)
-					control.HaltTransmitters = true
-				}
-			} else {
-				response, err := HTTPClient.Do(request)
-				if err != nil {
-					log.Errorln(err)
-					HTTPClient.CloseIdleConnections()
-					if i >= maxRetry {
-						log.Errorf("Aborting upload due to max retries for part %v has been reached", part.partNum)
-						control.HaltTransmitters = true
-					}
-				} else {
-					parts.ETag = response.Header.Get("ETag")
-					parts.PartNumber = part.partNum
-					control.PartsChan <- parts
-					HTTPClient.CloseIdleConnections()
-					break
-				}
+				continue
 			}
+			response, err := HTTPClient.Do(request)
+			if err != nil {
+				log.Errorln(err)
+				HTTPClient.CloseIdleConnections()
+				continue
+			}
+			parts.ETag = response.Header.Get("ETag")
+			parts.PartNumber = part.partNum
+			control.PartsChan <- parts
+			break
 		}
 	}
 }
