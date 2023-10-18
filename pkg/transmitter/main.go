@@ -147,7 +147,11 @@ func (client Client) SendFile(filename string, payloadType string) error {
 	}
 	if result.Type == "azure" {
 		log.Debugf("Got signed url for %v: %v", filename, result.SASURL)
-		uploadToAzureSAS(filename, result.SASURL, client.settings)
+		err := uploadToAzureSAS(filename, result.SASURL, client.settings)
+		if err != nil {
+			return err
+		}
+
 	} else if result.Type == "s3" {
 		log.Debugf("Got signed url for %v: %v", filename, result.Key)
 		var completeMultipartUpload completeMultipartUpload

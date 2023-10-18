@@ -27,3 +27,5 @@ go.work
 
 # Example transmitter
 examples/transmitter/transmitter
+
+**/.vscode

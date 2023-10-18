@@ -3,7 +3,7 @@
 ------
 # Samurai Go client SDK
 
-The Samurai Go SDK provies simple APIs to interact with NTT Security Holdings Samurai MDR service
+The Samurai Go SDK provides simple APIs to interact with NTT Security Holdings Samurai MDR service
 
 Examples of how to use the SDK is provided in the examples folder
 
@@ -13,7 +13,7 @@ Transmitter client uploads a selected set of file types (payloads) to Samurai MD
 
 ### Installation
 ```
-go get github.com/NTTS-Innovation/samurai-go@v1.0.3
+go get github.com/NTTS-Innovation/samurai-go@v1.0.4
 ```
 
 ### Usage
