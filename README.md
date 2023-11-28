@@ -58,6 +58,8 @@ func main() {
 
 ### Usage with generator package
 
+For a concrete implementation, view the WithSecure-Integration.
+
 ```
 import {
 "github.com/NTTS-Innovation/samurai-go/pkg/generator"
@@ -81,13 +83,40 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ws_alert := ... // your struct with a MapToAlertCIM func
+	cim_alert := generator.GetBaseAlert()
+	cim_alert.Action = "BLOCK"
+	
+	integration_name := "xxx"
 
-	cim_alert, err := ws_alert.MapToAlertCIM(integration_name)
+	//Add evidence blob as evidence.json
+	cim_alert.SetBlobsProperties(integration_name, integration_name)
+	ws_as_json, err := json.Marshal(ws)
+	cim_alert.AddJSONData(ws_as_json, "evidence", true)
+
+	cim_alert.Src = "n/a"
+	cim_alert.Dst = "n/a"
+	cim_alert.ShortDesc = "WithSecure Elements EDR"
+	cim_alert.DevicePhysical = integration_name
+	cim_alert.DeviceVirtual = integration_name
+	cim_alert.Type = "hids"
+	cim_alert.Vendor = "WithSecure"
+	cim_alert.Platform = "withsecure_elements"
+	cim_alert.Context["severity"] = "CRITICAL"
+
+	/* Set time fields */
+	t, err := time.Parse("2006-01-02T15:04:05.999Z", "2023-03-03 16:54") // just for example
 	if err != nil {
-		log.Errorf("Failed to convert trigger due to: %v", err)
-		continue
+		fmt.Fatalf("Unable to parse PersistenceTimestamp value %s, struct: %+v", ws.PersistenceTimestamp, ws)
 	}
+	cim_alert.AddTimeStampFields(t)
+	cim_alert.SetSha()
+
+	err = cim_alert.ValidateAlert()
+
+	if err != nil {
+		fmt.Fatalf("Validate failed due to '%v', alert cim: ========%+v======= b", err, cim_alert)
+	}
+
 	log.Debugf("Succeded in converting trigger %s to alert CIM, uploading alert", cim_alert.Name)
 
 	outp, err := json.Marshal(cim_alert)
@@ -107,50 +136,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-}
-
-
-func (ws *WithSecureAlert) MapToAlertCIM(integration_name string) (generator.Alert, error) {
-	cim_alert := generator.GetBaseAlert()
-	
-	known_block_actions := []string{"blocked", "disinfected", "quarantined", "deleted", "trashed"}
-	if contains(known_block_actions, ws.Action) {
-		cim_alert.Action = "BLOCK"
-	} else {
-		// defaulting to allow if unknown action
-		cim_alert.Action = "ACCEPT"
-	}
-
-	//Add evidence blob as evidence.json
-	cim_alert.SetBlobsProperties(integration_name, integration_name)
-	ws_as_json, err := json.Marshal(ws)
-	cim_alert.AddJSONData(ws_as_json, "evidence", true)
-
-	cim_alert.Src = "n/a"
-	cim_alert.Dst = "n/a"
-	cim_alert.ShortDesc = "WithSecure Elements EDR"
-	cim_alert.DevicePhysical = integration_name
-	cim_alert.DeviceVirtual = integration_name
-	cim_alert.Type = "hids"
-	cim_alert.Vendor = "WithSecure"
-	cim_alert.Platform = "withsecure_elements"
-	cim_alert.Context["severity"] = ws.Severity
-
-	/* Set time fields */
-	t, err := time.Parse("2006-01-02T15:04:05.999Z", ws.PersistenceTimestamp)
-	if err != nil {
-		return cim_alert, fmt.Errorf("Unable to parse PersistenceTimestamp value %s, struct: %+v", ws.PersistenceTimestamp, ws)
-	}
-	cim_alert.AddTimeStampFields(t)
-	cim_alert.SetSha()
-
-	err = cim_alert.ValidateAlert()
-
-	if err != nil {
-		return cim_alert, fmt.Errorf("Validate failed due to '%v', alert cim: ========%+v======= based on struct: =======%+v=======", err, cim_alert, ws)
-	}
-
-	return cim_alert, err
 }
 
 ```
