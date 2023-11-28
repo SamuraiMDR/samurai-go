@@ -59,7 +59,7 @@ type AlertsV1 struct {
 /*
 	Generate basic alert with necessary fields set
 */
-func GetBaseAlert() AlertV1 {
+func GetBaseAlertV1() AlertV1 {
 	alert := AlertV1{
 		Context:             make(map[string]interface{}),
 		SafeHtmlClickDesc:   false,
