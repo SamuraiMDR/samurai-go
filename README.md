@@ -83,7 +83,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	cim_alert := generator.GetBaseAlert()
+	cim_alert := generator.GetBaseAlertV1()
 	cim_alert.Action = "BLOCK"
 	
 	integration_name := "xxx"
