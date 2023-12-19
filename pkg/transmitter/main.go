@@ -79,7 +79,7 @@ type Client struct {
 func getSAS(payload string, suffix string, credentials credentials.APICredentials, settings Settings) (sasResult, error) {
 	var result sasResult
 
-	body, err := json.Marshal(sas{payload, suffix, settings.Profile})
+	body, err := json.Marshal(sas{payload, settings.Profile, suffix})
 	if err != nil {
 		return result, err
 	}
