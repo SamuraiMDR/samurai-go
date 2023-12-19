@@ -53,7 +53,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = client.SendFile(filename, payloadType)
+	err = client.SendFile(filename, "", payloadType)
 	if err != nil {
 		log.Fatal(err)
 	}
