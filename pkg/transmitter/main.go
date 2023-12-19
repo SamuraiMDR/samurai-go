@@ -25,6 +25,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sort"
 	"sync"
 	"time"
@@ -55,6 +56,7 @@ var errUnknownPayload = errors.New("unknown payload")
 type sas struct {
 	Payload string `json:"payload"`
 	Profile string `json:"profile"`
+	Suffix  string `json:"suffix"`
 }
 
 type sasResult struct {
@@ -74,10 +76,10 @@ type Client struct {
 //	return filepath.Base(dir)
 //}
 
-func getSAS(payload string, credentials credentials.APICredentials, settings Settings) (sasResult, error) {
+func getSAS(payload string, suffix string, credentials credentials.APICredentials, settings Settings) (sasResult, error) {
 	var result sasResult
 
-	body, err := json.Marshal(sas{payload, settings.Profile})
+	body, err := json.Marshal(sas{payload, suffix, settings.Profile})
 	if err != nil {
 		return result, err
 	}
@@ -127,7 +129,9 @@ func NewClient(settings Settings, credentials credentials.APICredentials) (Clien
 	return client, nil
 }
 
-func (client Client) SendFile(filename string, payloadType string) error {
+func (client Client) SendFile(filename string, fileSuffix string, payloadType string) error {
+	var suffix string
+
 	if client.settings.Profile == "" {
 		client.settings.Profile = "default"
 	}
@@ -136,8 +140,17 @@ func (client Client) SendFile(filename string, payloadType string) error {
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: client.settings.AllowInsecureTLS}
 	}
 
+	if fileSuffix == "" {
+		suffix = filepath.Ext(filename)
+	} else {
+		suffix = fileSuffix
+	}
+	if suffix == "" {
+		return fmt.Errorf("filename %v does not have a file suffix, please set fileSuffix", filename)
+	}
+
 	// payloadType := getType(filename)
-	result, err := getSAS(payloadType, client.credentials, client.settings)
+	result, err := getSAS(payloadType, suffix, client.credentials, client.settings)
 	if err == errUnknownPayload {
 		log.Warnf("Uploading file %v aborted since payload %v is not supported", filename, payloadType)
 		return err
