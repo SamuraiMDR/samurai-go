@@ -13,7 +13,7 @@ Transmitter client uploads a selected set of file types (payloads) to Samurai MD
 
 ### Installation
 ```
-go get github.com/SamuraiMDR/samurai-go@v1.0.8
+go get github.com/SamuraiMDR/samurai-go@v1.0.9
 ```
 
 ### Usage

@@ -27,6 +27,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -141,7 +142,7 @@ func (client Client) SendFile(filename string, fileSuffix string, payloadType st
 	}
 
 	if fileSuffix == "" {
-		suffix = filepath.Ext(filename)
+		suffix = strings.Trim(filepath.Ext(filename), ".")
 	} else {
 		suffix = fileSuffix
 	}
