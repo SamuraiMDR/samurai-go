@@ -1,4 +1,4 @@
-module github.com/NTTS-Innovation/samurai-go
+module github.com/SamuraiMDR/samurai-go
 
 go 1.20
 

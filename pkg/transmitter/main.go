@@ -30,7 +30,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/NTTS-Innovation/samurai-go/pkg/credentials"
+	"github.com/SamuraiMDR/samurai-go/pkg/credentials"
 	"github.com/inhies/go-bytesize"
 	log "github.com/sirupsen/logrus"
 )

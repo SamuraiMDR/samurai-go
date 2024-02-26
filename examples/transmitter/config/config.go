@@ -21,8 +21,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/NTTS-Innovation/samurai-go/pkg/credentials"
-	"github.com/NTTS-Innovation/samurai-go/pkg/transmitter"
+	"github.com/SamuraiMDR/samurai-go/pkg/credentials"
+	"github.com/SamuraiMDR/samurai-go/pkg/transmitter"
 	"gopkg.in/yaml.v2"
 )
 

@@ -1,5 +1,5 @@
-[![Go Report Card](https://goreportcard.com/badge/github.com/NTTS-Innovation/samurai-go)](https://goreportcard.com/report/github.com/NTTS-Innovation/samurai-go)
-[![GitHub tag](https://img.shields.io/github/tag/NTTS-Innovation/samurai-go.svg)](https://github.com/NTTS-Innovation/samurai-go/tags)
+[![Go Report Card](https://goreportcard.com/badge/github.com/SamuraiMDR/samurai-go)](https://goreportcard.com/report/github.com/SamuraiMDR/samurai-go)
+[![GitHub tag](https://img.shields.io/github/tag/SamuraiMDR/samurai-go.svg)](https://github.com/SamuraiMDR/samurai-go/tags)
 ------
 # Samurai Go client SDK
 
@@ -13,7 +13,7 @@ Transmitter client uploads a selected set of file types (payloads) to Samurai MD
 
 ### Installation
 ```
-go get github.com/NTTS-Innovation/samurai-go@v1.0.6
+go get github.com/SamuraiMDR/samurai-go@v1.0.6
 ```
 
 ### Usage
@@ -23,8 +23,8 @@ package main
 import (
 	"log"
 
-	"github.com/NTTS-Innovation/samurai-go/pkg/credentials"
-	"github.com/NTTS-Innovation/samurai-go/pkg/transmitter"
+	"github.com/SamuraiMDR/samurai-go/pkg/credentials"
+	"github.com/SamuraiMDR/samurai-go/pkg/transmitter"
 )
 
 func main() {
@@ -62,7 +62,7 @@ For a concrete implementation, view the WithSecure-Integration.
 
 ```
 import {
-"github.com/NTTS-Innovation/samurai-go/pkg/generator"
+"github.com/SamuraiMDR/samurai-go/pkg/generator"
 }
 
 func main() {

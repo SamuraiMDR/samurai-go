@@ -19,8 +19,8 @@ package main
 import (
 	"os"
 
-	"github.com/NTTS-Innovation/samurai-go/examples/transmitter/config"
-	"github.com/NTTS-Innovation/samurai-go/pkg/transmitter"
+	"github.com/SamuraiMDR/samurai-go/examples/transmitter/config"
+	"github.com/SamuraiMDR/samurai-go/pkg/transmitter"
 	log "github.com/sirupsen/logrus"
 )
 
