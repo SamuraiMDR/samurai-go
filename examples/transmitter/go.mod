@@ -3,7 +3,7 @@ module github.com/SamuraiMDR/samurai-go/examples/transmitter
 go 1.21
 
 require (
-	github.com/SamuraiMDR/samurai-go v1.0.8
+	github.com/SamuraiMDR/samurai-go v1.0.9
 	github.com/sirupsen/logrus v1.9.3
 	gopkg.in/yaml.v2 v2.4.0
 )
