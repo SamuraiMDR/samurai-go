@@ -71,10 +71,11 @@ func validateSettings(settings transmitter.Settings) error {
 
 func NewTransmitterCredentials(configFile string) (credentials.APICredentials, error) {
 	cred := credentials.APICredentials{
-		URL:      "",
-		APIKey:   "",
-		Passkey:  "",
-		DeviceId: "",
+		URL:           "",
+		APIKey:        "",
+		Passkey:       "",
+		DeviceId:      "",
+		IntegrationId: "",
 	}
 
 	if configFile != "" {
@@ -105,7 +106,6 @@ func validateCredentials(cred credentials.APICredentials) error {
 	}{
 		{cred.URL == "", "URL not defined"},
 		{cred.APIKey == "", "apiKey is undefined"},
-		{cred.DeviceId == "", "deviceId is undefined"},
 		{cred.Passkey == "", "passkey is undefined"},
 	}
 
@@ -113,6 +113,13 @@ func validateCredentials(cred credentials.APICredentials) error {
 		if check.bad {
 			return fmt.Errorf("invalid credentials: %s", check.errMsg)
 		}
+	}
+
+	if cred.DeviceId == "" && cred.IntegrationId == "" {
+		return fmt.Errorf("invalid credentials, deviceId or integrationId needs to be defined")
+	}
+	if cred.DeviceId != "" && cred.IntegrationId != "" {
+		return fmt.Errorf("only one of deviceId or integrationId can be defined")
 	}
 	return nil
 }
