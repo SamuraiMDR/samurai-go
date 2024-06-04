@@ -111,7 +111,7 @@ func sendRequest(body []byte, credentials credentials.APICredentials) ([]byte, e
 	return bodyBytes, nil
 }
 
-func getSignedURL(partData sasResult, part int, credentials credentials.APICredentials, settings Settings) (signedURLMessage, error) {
+func getSignedURL(partData sasResult, part int, credentials credentials.APICredentials) (signedURLMessage, error) {
 	var result signedURLMessage
 	body, err := json.Marshal(signedURL{"GET_SIGNED_URL", partData.Key, partData.UploadId, part})
 	if err != nil {
@@ -131,7 +131,7 @@ func getSignedURL(partData sasResult, part int, credentials credentials.APICrede
 	return result, nil
 }
 
-func completeUpload(partData sasResult, parts []parts, credentials credentials.APICredentials, settings Settings) (completeMultipartUploadMessage, error) {
+func completeUpload(partData sasResult, parts []parts, credentials credentials.APICredentials) (completeMultipartUploadMessage, error) {
 	var result completeMultipartUploadMessage
 	body, err := json.Marshal(completeMultipartUpload{"COMPLETE_MULTIPART_UPLOAD", partData.Key, partData.UploadId, parts})
 	if err != nil {
@@ -151,7 +151,7 @@ func completeUpload(partData sasResult, parts []parts, credentials credentials.A
 	return result, nil
 }
 
-func abortMultipartUpload(partData sasResult, credentials credentials.APICredentials, settings Settings) (abortMultipartUploadMessage, error) {
+func abortMultipartUpload(partData sasResult, credentials credentials.APICredentials) (abortMultipartUploadMessage, error) {
 	var result abortMultipartUploadMessage
 	body, err := json.Marshal(abortedMultipartUpload{"ABORT_MULTIPART_UPLOAD", partData.Key, partData.UploadId})
 	if err != nil {
@@ -171,7 +171,7 @@ func abortMultipartUpload(partData sasResult, credentials credentials.APICredent
 	return result, nil
 }
 
-func partsTransmitter(ChunkChan <-chan transmitterPayload, control control, threadNr int) {
+func partsTransmitter(ChunkChan <-chan transmitterPayload, control control) {
 	for part := range ChunkChan {
 		for i := 0; i <= maxRetry; i++ {
 			if i >= maxRetry {

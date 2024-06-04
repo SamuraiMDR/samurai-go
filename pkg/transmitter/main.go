@@ -209,7 +209,7 @@ func (client Client) SendFile(filename string, fileSuffix string, payloadType st
 		// Start workers
 		for i := 0; i < partsTransmitterWorkers; i++ {
 			//log.Infoln("Starting transmitter worker " + strconv.Itoa(i))
-			go partsTransmitter(ChunkChan, control, i)
+			go partsTransmitter(ChunkChan, control)
 		}
 		// Collect data from completed multiparts
 		go func() {
@@ -241,7 +241,7 @@ func (client Client) SendFile(filename string, fileSuffix string, payloadType st
 					} else {
 						currentSize = partSize
 					}
-					signedURL, err := getSignedURL(result, partNum, client.credentials, client.settings)
+					signedURL, err := getSignedURL(result, partNum, client.credentials)
 					if err != nil {
 						return err
 					}
@@ -259,7 +259,7 @@ func (client Client) SendFile(filename string, fileSuffix string, payloadType st
 		control.EndpointWG.Wait()
 		close(control.StopChan)
 		if control.HaltTransmitters {
-			result, err := abortMultipartUpload(result, client.credentials, client.settings)
+			result, err := abortMultipartUpload(result, client.credentials)
 			if err != nil {
 				return err
 			} else {
@@ -270,7 +270,7 @@ func (client Client) SendFile(filename string, fileSuffix string, payloadType st
 			sort.SliceStable(completeMultipartUpload.Parts, func(i, j int) bool {
 				return completeMultipartUpload.Parts[i].PartNumber < completeMultipartUpload.Parts[j].PartNumber
 			})
-			result, err := completeUpload(result, completeMultipartUpload.Parts, client.credentials, client.settings)
+			result, err := completeUpload(result, completeMultipartUpload.Parts, client.credentials)
 			if err != nil {
 				return err
 			} else {
