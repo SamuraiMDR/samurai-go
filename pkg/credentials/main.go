@@ -17,8 +17,9 @@
 package credentials
 
 type APICredentials struct {
-	URL      string `yaml:"url"`
-	APIKey   string `yaml:"apiKey"`
-	Passkey  string `yaml:"passkey"`
-	DeviceId string `yaml:"deviceId"`
+	URL           string `yaml:"url"`
+	APIKey        string `yaml:"apiKey"`
+	Passkey       string `yaml:"passkey"`
+	DeviceId      string `yaml:"deviceId"`
+	IntegrationId string `yaml:"integrationId"`
 }

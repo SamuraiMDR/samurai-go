@@ -95,8 +95,12 @@ func getSAS(payload string, suffix string, credentials credentials.APICredential
 	}
 	request.Header.Add("Content-Type", "application/json")
 	request.Header.Add("x-api-key", credentials.APIKey)
-	request.Header.Add("device_id", credentials.DeviceId)
 	request.Header.Add("passkey", credentials.Passkey)
+	if credentials.IntegrationId != "" {
+		request.Header.Add("integration_id", credentials.IntegrationId)
+	} else {
+		request.Header.Add("device_id", credentials.DeviceId)
+	}
 
 	response, err := HTTPClient.Do(request)
 	if err != nil {
