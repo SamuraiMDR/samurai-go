@@ -18,8 +18,11 @@ package transmitter
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blockblob"
 	"github.com/inhies/go-bytesize"
@@ -47,13 +50,25 @@ func uploadToAzureSAS(filename string, sas string, settings Settings) error {
 	if err != nil {
 		return err
 	}
-	_, err = client.UploadFile(context.TODO(), fileHandler,
-		&azblob.UploadFileOptions{
-			BlockSize:   int64(104857600),
-			Concurrency: uint16(3),
-		})
+	// Check if the blob exists by getting its properties
+	_, err = client.GetProperties(context.TODO(), nil)
 	if err != nil {
-		return err
+		var storageErr *azcore.ResponseError
+		if errors.As(err, &storageErr) && storageErr.ErrorCode == "BlobNotFound" {
+			// Upload the file since it was not found
+			_, err = client.UploadFile(context.TODO(), fileHandler,
+				&azblob.UploadFileOptions{
+					BlockSize:   int64(104857600),
+					Concurrency: uint16(3),
+				})
+			if err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("failed to get blob properties: %v", err)
+		}
+	} else {
+		return fmt.Errorf("blob exists, skipping upload")
 	}
 	log.Debugln("Upload completed")
 	return nil
