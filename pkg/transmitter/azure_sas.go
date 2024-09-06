@@ -84,7 +84,7 @@ func uploadToAzureSAS(filename string, sas string, settings Settings) error {
 			}
 		} else {
 			// The client should not retry if the blob already exists
-			return errFileExists
+			return ErrFileExists
 		}
 	}
 	return fmt.Errorf("failed to send payload after %v retries", maxRetry)

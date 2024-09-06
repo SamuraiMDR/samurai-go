@@ -50,8 +50,8 @@ type control struct {
 	HaltTransmitters bool
 }
 
-var errUnknownPayload = errors.New("unknown payload")
-var errFileExists = errors.New("file already exists")
+var ErrUnknownPayload = errors.New("unknown payload")
+var ErrFileExists = errors.New("file already exists")
 
 type sas struct {
 	Payload string `json:"payload"`
@@ -112,7 +112,7 @@ func getSAS(payload string, suffix string, credentials credentials.APICredential
 			return result, err
 		}
 	case 415:
-		return result, errUnknownPayload
+		return result, ErrUnknownPayload
 	default:
 		err := fmt.Errorf("status code: %d, Body: %v", response.StatusCode, string(bodyBytes))
 		return result, err
@@ -152,7 +152,7 @@ func (client Client) SendFile(filename string, fileSuffix string, payloadType st
 	}
 
 	result, err := getSAS(payloadType, suffix, client.credentials, client.settings)
-	if err == errUnknownPayload {
+	if err == ErrUnknownPayload {
 		log.Warnf("Uploading file %v aborted since payload %v is not supported", filename, payloadType)
 		return err
 	}
