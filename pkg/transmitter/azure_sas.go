@@ -64,6 +64,7 @@ func uploadToAzureSAS(filename string, sas string, settings Settings) error {
 		// Check if the blob exists by getting its properties
 		_, err = client.GetProperties(context.TODO(), nil)
 		if err != nil {
+			log.Debugf("Properties error: %v", err)
 			var storageErr *azcore.ResponseError
 			if errors.As(err, &storageErr) && storageErr.ErrorCode == "BlobNotFound" {
 				// Upload the file since it was not found
