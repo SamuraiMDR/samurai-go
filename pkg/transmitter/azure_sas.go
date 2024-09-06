@@ -23,6 +23,7 @@ import (
 	"os"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blockblob"
 	"github.com/inhies/go-bytesize"
@@ -46,30 +47,44 @@ func uploadToAzureSAS(filename string, sas string, settings Settings) error {
 	} else {
 		log.Infof("Uploading file %v, total %v", filename, bytesize.ByteSize(fileSize).String())
 	}
-	client, err := blockblob.NewClientWithNoCredential(sas, nil)
+	// Do not let the client retry, we need to do it ourselves
+	client, err := blockblob.NewClientWithNoCredential(sas, &blockblob.ClientOptions{
+		ClientOptions: policy.ClientOptions{
+			Retry: policy.RetryOptions{
+				MaxRetries: -1,
+			},
+		},
+	})
 	if err != nil {
 		return err
 	}
-	// Check if the blob exists by getting its properties
-	_, err = client.GetProperties(context.TODO(), nil)
-	if err != nil {
-		var storageErr *azcore.ResponseError
-		if errors.As(err, &storageErr) && storageErr.ErrorCode == "BlobNotFound" {
-			// Upload the file since it was not found
-			_, err = client.UploadFile(context.TODO(), fileHandler,
-				&azblob.UploadFileOptions{
-					BlockSize:   int64(104857600),
-					Concurrency: uint16(3),
-				})
-			if err != nil {
-				return err
+
+	for retry := 0; retry < settings.MaxRetries; retry++ {
+		log.Debugf("Try %v of %v", retry, settings.MaxRetries)
+		// Check if the blob exists by getting its properties
+		_, err = client.GetProperties(context.TODO(), nil)
+		if err != nil {
+			var storageErr *azcore.ResponseError
+			if errors.As(err, &storageErr) && storageErr.ErrorCode == "BlobNotFound" {
+				// Upload the file since it was not found
+				_, err = client.UploadFile(context.TODO(), fileHandler,
+					&azblob.UploadFileOptions{
+						BlockSize:   int64(104857600),
+						Concurrency: uint16(3),
+					})
+				if err != nil {
+					return err
+				} else {
+					log.Debugln("Upload completed")
+					return nil
+				}
+			} else {
+				return fmt.Errorf("failed to get blob properties: %v", err)
 			}
 		} else {
-			return fmt.Errorf("failed to get blob properties: %v", err)
+			// The client should not retry if the blob already exists
+			return errFileExists
 		}
-	} else {
-		return fmt.Errorf("blob exists, skipping upload")
 	}
-	log.Debugln("Upload completed")
-	return nil
+	return fmt.Errorf("failed to send payload after %v retries", maxRetry)
 }

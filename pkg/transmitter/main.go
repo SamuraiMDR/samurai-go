@@ -40,6 +40,7 @@ type Settings struct {
 	AllowInsecureTLS bool   `yaml:"insecure"`
 	Debug            bool   `yaml:"debug"`
 	Profile          string `yaml:"profile"`
+	MaxRetries       int    `yaml:"max_retries"`
 }
 
 type control struct {
@@ -50,10 +51,8 @@ type control struct {
 }
 
 var errUnknownPayload = errors.New("unknown payload")
+var errFileExists = errors.New("file already exists")
 
-// var errCorruptPayload = errors.New("corrupt payload")
-
-// var types = []string{"docker", "syslog", "pdns", "bouncer", "assets", "logfiles", "contrive_bouncer"} // Add new types here, same slice is used for filter validation
 type sas struct {
 	Payload string `json:"payload"`
 	Profile string `json:"profile"`
@@ -71,11 +70,6 @@ type Client struct {
 	credentials credentials.APICredentials
 	settings    Settings
 }
-
-//func getType(filename string) string {
-//	dir := filepath.Dir(filename)
-//	return filepath.Base(dir)
-//}
 
 func getSAS(payload string, suffix string, credentials credentials.APICredentials, settings Settings) (sasResult, error) {
 	var result sasResult
@@ -131,6 +125,9 @@ func NewClient(settings Settings, credentials credentials.APICredentials) (Clien
 		settings:    settings,
 		credentials: credentials,
 	}
+	if client.settings.MaxRetries == 0 {
+		client.settings.MaxRetries = 3
+	}
 	return client, nil
 }
 
@@ -154,7 +151,6 @@ func (client Client) SendFile(filename string, fileSuffix string, payloadType st
 		return fmt.Errorf("filename %v does not have a file suffix, please set fileSuffix", filename)
 	}
 
-	// payloadType := getType(filename)
 	result, err := getSAS(payloadType, suffix, client.credentials, client.settings)
 	if err == errUnknownPayload {
 		log.Warnf("Uploading file %v aborted since payload %v is not supported", filename, payloadType)
