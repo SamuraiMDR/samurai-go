@@ -60,7 +60,7 @@ func uploadToAzureSAS(filename string, sas string, settings Settings) error {
 	}
 
 	for retry := 0; retry < settings.MaxRetries; retry++ {
-		log.Debugf("Try %v of %v", retry, settings.MaxRetries)
+		log.Debugf("Try %v of %v", retry+1, settings.MaxRetries)
 		// Check if the blob exists by getting its properties
 		_, err = client.GetProperties(context.TODO(), nil)
 		if err != nil {
@@ -74,13 +74,13 @@ func uploadToAzureSAS(filename string, sas string, settings Settings) error {
 						Concurrency: uint16(3),
 					})
 				if err != nil {
-					return err
+					log.Errorf("failed to upload file: %v. Try %v of %v", err, retry+1, settings.MaxRetries)
 				} else {
 					log.Debugln("Upload completed")
 					return nil
 				}
 			} else {
-				return fmt.Errorf("failed to get blob properties: %v", err)
+				log.Errorf("failed to get blob properties: %v", err)
 			}
 		} else {
 			// The client should not retry if the blob already exists
