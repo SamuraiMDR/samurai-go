@@ -54,9 +54,10 @@ var ErrUnknownPayload = errors.New("unknown payload")
 var ErrFileExists = errors.New("file already exists")
 
 type sas struct {
-	Payload string `json:"payload"`
-	Profile string `json:"profile"`
-	Suffix  string `json:"suffix"`
+	Payload  string `json:"payload"`
+	Profile  string `json:"profile"`
+	Suffix   string `json:"suffix"`
+	Filename string `json:"filename"`
 }
 
 type sasResult struct {
@@ -64,6 +65,7 @@ type sasResult struct {
 	Type     string `json:"profile_type"`
 	Key      string `json:"key"`
 	UploadId string `json:"upload_id"`
+	BlobID   string `json:"blob_id"`
 }
 
 type Client struct {
@@ -71,10 +73,10 @@ type Client struct {
 	settings    Settings
 }
 
-func getSAS(payload string, suffix string, credentials credentials.APICredentials, settings Settings) (sasResult, error) {
+func getSAS(payload string, destinationFilename string, suffix string, credentials credentials.APICredentials, settings Settings) (sasResult, error) {
 	var result sasResult
 
-	body, err := json.Marshal(sas{payload, settings.Profile, suffix})
+	body, err := json.Marshal(sas{payload, settings.Profile, suffix, destinationFilename})
 	if err != nil {
 		return result, err
 	}
@@ -131,7 +133,7 @@ func NewClient(settings Settings, credentials credentials.APICredentials) (Clien
 	return client, nil
 }
 
-func (client Client) SendFile(filename string, fileSuffix string, payloadType string) error {
+func (client Client) SendFile(sourceFilename string, destinationFilename string, fileSuffix string, payloadType string) error {
 	var suffix string
 
 	if client.settings.Profile == "" {
@@ -143,31 +145,31 @@ func (client Client) SendFile(filename string, fileSuffix string, payloadType st
 	}
 
 	if fileSuffix == "" {
-		suffix = strings.Trim(filepath.Ext(filename), ".")
+		suffix = strings.Trim(filepath.Ext(sourceFilename), ".")
 	} else {
 		suffix = fileSuffix
 	}
 	if suffix == "" {
-		return fmt.Errorf("filename %v does not have a file suffix, please set fileSuffix", filename)
+		return fmt.Errorf("filename %v does not have a file suffix, please set fileSuffix", sourceFilename)
 	}
 
-	result, err := getSAS(payloadType, suffix, client.credentials, client.settings)
+	result, err := getSAS(payloadType, destinationFilename, suffix, client.credentials, client.settings)
 	if err == ErrUnknownPayload {
-		log.Warnf("Uploading file %v aborted since payload %v is not supported", filename, payloadType)
+		log.Warnf("Uploading file %v aborted since payload %v is not supported", sourceFilename, payloadType)
 		return err
 	}
 	if err != nil {
 		return fmt.Errorf("unknown error from backend: %v", err)
 	}
 	if result.Type == "azure" {
-		log.Debugf("Got signed url for %v: %v", filename, result.SASURL)
-		err := uploadToAzureSAS(filename, result.SASURL, client.settings)
+		log.Debugf("Got signed url for %v: %v", sourceFilename, result.SASURL)
+		err := uploadToAzureSAS(sourceFilename, result.SASURL, client.settings)
 		if err != nil {
 			return err
 		}
 
 	} else if result.Type == "s3" {
-		log.Debugf("Got signed url for %v: %v", filename, result.Key)
+		log.Debugf("Got signed url for %v: %v", sourceFilename, result.Key)
 		var completeMultipartUpload completeMultipartUpload
 		var control = control{
 			EndpointWG:       &sync.WaitGroup{},
@@ -175,7 +177,7 @@ func (client Client) SendFile(filename string, fileSuffix string, payloadType st
 			PartsChan:        make(chan interface{}),
 			HaltTransmitters: false,
 		}
-		file, err := os.Open(filename)
+		file, err := os.Open(sourceFilename)
 		if err != nil {
 			return err
 		}
@@ -185,7 +187,7 @@ func (client Client) SendFile(filename string, fileSuffix string, payloadType st
 			return err
 		}
 		fileSize := stat.Size()
-		log.Infof("Uploading file %v, total %v", filename, bytesize.ByteSize(fileSize).String())
+		log.Infof("Uploading file %v, total %v", sourceFilename, bytesize.ByteSize(fileSize).String())
 
 		buffer := make([]byte, fileSize)
 		_, err = file.Read(buffer)
