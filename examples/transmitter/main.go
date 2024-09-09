@@ -34,6 +34,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	if settings.Debug {
+		log.SetLevel(log.DebugLevel)
+		log.SetReportCaller(true)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
 	credFile := "credentials.yaml"
 	creds, err := config.NewTransmitterCredentials(credFile)
 	if err != nil {
@@ -61,7 +67,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = client.SendFile(filename, "", payloadType, destinationFilename)
+	err = client.SendFile(filename, destinationFilename, "", payloadType)
 	if err != nil {
 		log.Fatal(err)
 	}
