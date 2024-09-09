@@ -27,6 +27,7 @@ import (
 func main() {
 	var filename string
 	var payloadType string
+	var destinationFilename string
 
 	configFile := "config.yaml"
 	settings, err := config.NewTransmitterSettings(configFile)
@@ -44,6 +45,13 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+	} else if len(os.Args) == 4 {
+		filename = os.Args[1]
+		payloadType = os.Args[2]
+		destinationFilename = os.Args[3]
+		if err != nil {
+			panic(err)
+		}
 	} else {
 		log.Fatalln("filename or payload argument is missing")
 	}
@@ -53,7 +61,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = client.SendFile(filename, "", payloadType)
+	err = client.SendFile(filename, "", payloadType, destinationFilename)
 	if err != nil {
 		log.Fatal(err)
 	}
