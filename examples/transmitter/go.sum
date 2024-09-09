@@ -10,8 +10,8 @@ github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.4.0 h1:Be6KInmFEKV81c0pO
 github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.4.0/go.mod h1:WCPBHsOXfBVnivScjs2ypRfimjEW0qPVLGgJkZlrIOA=
 github.com/AzureAD/microsoft-authentication-library-for-go v1.2.2 h1:XHOnouVk1mxXfQidrMEnLlPk9UMeRtyBTnEFtxkV0kU=
 github.com/AzureAD/microsoft-authentication-library-for-go v1.2.2/go.mod h1:wP83P5OoQ5p6ip3ScPr0BAq0BvuPAvacpEuSzyouqAI=
-github.com/SamuraiMDR/samurai-go v1.0.12-0.20240909085344-32c245da96b2 h1:FnGem6BQRxyBW0z1X5DNb4+hCp1+lgxnAwFkaUhSezg=
-github.com/SamuraiMDR/samurai-go v1.0.12-0.20240909085344-32c245da96b2/go.mod h1:hSKEZ8vt79duvzCWLDF0+i3TiVPaNA7c0fmHHzgLDGk=
+github.com/SamuraiMDR/samurai-go v1.0.12 h1:c7hgnPFDpH4R+M7r5cl4ZHuq1wc65q7C+AnVGCgaDY0=
+github.com/SamuraiMDR/samurai-go v1.0.12/go.mod h1:hSKEZ8vt79duvzCWLDF0+i3TiVPaNA7c0fmHHzgLDGk=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
