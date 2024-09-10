@@ -73,6 +73,13 @@ type Client struct {
 	settings    Settings
 }
 
+type FileDetails struct {
+	SourceFilename      string
+	DestinationFilename string
+	FileSuffix          string
+	PayloadType         string
+}
+
 func getSAS(payload string, destinationFilename string, suffix string, credentials credentials.APICredentials, settings Settings) (sasResult, error) {
 	var result sasResult
 
@@ -133,7 +140,7 @@ func NewClient(settings Settings, credentials credentials.APICredentials) (Clien
 	return client, nil
 }
 
-func (client Client) SendFile(sourceFilename string, destinationFilename string, fileSuffix string, payloadType string) error {
+func (client Client) SendFile(fd FileDetails) error {
 	var suffix string
 
 	if client.settings.Profile == "" {
@@ -144,32 +151,32 @@ func (client Client) SendFile(sourceFilename string, destinationFilename string,
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: client.settings.AllowInsecureTLS}
 	}
 
-	if fileSuffix == "" {
-		suffix = strings.Trim(filepath.Ext(sourceFilename), ".")
+	if fd.FileSuffix == "" {
+		suffix = strings.Trim(filepath.Ext(fd.SourceFilename), ".")
 	} else {
-		suffix = fileSuffix
+		suffix = fd.FileSuffix
 	}
 	if suffix == "" {
-		return fmt.Errorf("filename %v does not have a file suffix, please set fileSuffix", sourceFilename)
+		return fmt.Errorf("filename %v does not have a file suffix, please set fileSuffix", fd.SourceFilename)
 	}
 
-	result, err := getSAS(payloadType, destinationFilename, suffix, client.credentials, client.settings)
+	result, err := getSAS(fd.PayloadType, fd.DestinationFilename, suffix, client.credentials, client.settings)
 	if err == ErrUnknownPayload {
-		log.Warnf("Uploading file %v aborted since payload %v is not supported", sourceFilename, payloadType)
+		log.Warnf("Uploading file %v aborted since payload %v is not supported", fd.SourceFilename, fd.PayloadType)
 		return err
 	}
 	if err != nil {
 		return fmt.Errorf("unknown error from backend: %v", err)
 	}
 	if result.Type == "azure" {
-		log.Debugf("Got signed url for %v: %v", sourceFilename, result.SASURL)
-		err := uploadToAzureSAS(sourceFilename, result.SASURL, client.settings)
+		log.Debugf("Got signed url for %v: %v", fd.SourceFilename, result.SASURL)
+		err := uploadToAzureSAS(fd.SourceFilename, result.SASURL, client.settings)
 		if err != nil {
 			return err
 		}
 
 	} else if result.Type == "s3" {
-		log.Debugf("Got signed url for %v: %v", sourceFilename, result.Key)
+		log.Debugf("Got signed url for %v: %v", fd.SourceFilename, result.Key)
 		var completeMultipartUpload completeMultipartUpload
 		var control = control{
 			EndpointWG:       &sync.WaitGroup{},
@@ -177,7 +184,7 @@ func (client Client) SendFile(sourceFilename string, destinationFilename string,
 			PartsChan:        make(chan interface{}),
 			HaltTransmitters: false,
 		}
-		file, err := os.Open(sourceFilename)
+		file, err := os.Open(fd.SourceFilename)
 		if err != nil {
 			return err
 		}
@@ -187,7 +194,7 @@ func (client Client) SendFile(sourceFilename string, destinationFilename string,
 			return err
 		}
 		fileSize := stat.Size()
-		log.Infof("Uploading file %v, total %v", sourceFilename, bytesize.ByteSize(fileSize).String())
+		log.Infof("Uploading file %v, total %v", fd.SourceFilename, bytesize.ByteSize(fileSize).String())
 
 		buffer := make([]byte, fileSize)
 		_, err = file.Read(buffer)
@@ -198,7 +205,7 @@ func (client Client) SendFile(sourceFilename string, destinationFilename string,
 		var start, currentSize int
 		var remaining = int(fileSize)
 		var partNum = 1
-		completeMultipartUpload.EventType = payloadType
+		completeMultipartUpload.EventType = fd.PayloadType
 		completeMultipartUpload.Key = result.Key
 		completeMultipartUpload.UploadId = result.UploadId
 
