@@ -67,7 +67,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = client.SendFile(filename, destinationFilename, "", payloadType)
+	err = client.SendFile(transmitter.FileDetails{
+		SourceFilename:      filename,
+		DestinationFilename: destinationFilename,
+		PayloadType:         payloadType,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
