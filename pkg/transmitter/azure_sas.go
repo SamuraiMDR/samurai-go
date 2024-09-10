@@ -30,7 +30,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func uploadToAzureSAS(filename string, sas string, settings Settings) error {
+func uploadToAzureSAS(filename string, sr sasResult, settings Settings) error {
 	fileHandler, err := os.Open(filename)
 	if err != nil {
 		return err
@@ -41,14 +41,8 @@ func uploadToAzureSAS(filename string, sas string, settings Settings) error {
 		return err
 	}
 	fileSize := stat.Size()
-
-	if settings.Debug {
-		log.Debugf("Uploading file %v to %v, total %v", filename, sas, bytesize.ByteSize(fileSize).String())
-	} else {
-		log.Infof("Uploading file %v, total %v", filename, bytesize.ByteSize(fileSize).String())
-	}
 	// Do not let the client retry, we need to do it ourselves
-	client, err := blockblob.NewClientWithNoCredential(sas, &blockblob.ClientOptions{
+	client, err := blockblob.NewClientWithNoCredential(sr.SASURL, &blockblob.ClientOptions{
 		ClientOptions: policy.ClientOptions{
 			Retry: policy.RetryOptions{
 				MaxRetries: -1,
@@ -74,13 +68,17 @@ func uploadToAzureSAS(filename string, sas string, settings Settings) error {
 						Concurrency: uint16(3),
 					})
 				if err != nil {
-					log.Errorf("failed to upload file: %v. Try %v of %v", err, retry+1, settings.MaxRetries)
+					log.Errorf("failed to upload file: %v, blob_id %v. Try %v of %v", err, sr.BlobID, retry+1, settings.MaxRetries)
 				} else {
-					log.Debugln("Upload completed")
+					if settings.Debug {
+						log.Debugf("Uploaded file %v, blob_id %v to %v, total %v. Try %v of %v", filename, sr.BlobID, sr.SASURL, bytesize.ByteSize(fileSize).String(), retry+1, settings.MaxRetries)
+					} else {
+						log.Infof("Uploaded file %v, blob_id %v, total %v. Try %v of %v", filename, sr.BlobID, bytesize.ByteSize(fileSize).String(), retry+1, settings.MaxRetries)
+					}
 					return nil
 				}
 			} else {
-				log.Errorf("failed to get blob properties: %v", err)
+				log.Errorf("failed to get blob properties: %v, blob_id %v. Try %v of %v", err, sr.BlobID, retry+1, settings.MaxRetries)
 			}
 		} else {
 			// The client should not retry if the blob already exists

@@ -170,7 +170,7 @@ func (client Client) SendFile(fd FileDetails) error {
 	}
 	if result.Type == "azure" {
 		log.Debugf("Got signed url for %v: %v", fd.SourceFilename, result.SASURL)
-		err := uploadToAzureSAS(fd.SourceFilename, result.SASURL, client.settings)
+		err := uploadToAzureSAS(fd.SourceFilename, result, client.settings)
 		if err != nil {
 			return err
 		}
