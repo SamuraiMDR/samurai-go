@@ -166,7 +166,7 @@ func (client Client) SendFile(fd FileDetails) error {
 		return err
 	}
 	if err != nil {
-		return fmt.Errorf("unknown error from backend: %v", err)
+		return fmt.Errorf("could not generate SAS token: %v", err)
 	}
 	if result.Type == "azure" {
 		log.Debugf("Got signed url for %v: %v", fd.SourceFilename, result.SASURL)
