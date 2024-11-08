@@ -90,6 +90,7 @@ func sendRequest(body []byte, credentials credentials.APICredentials) ([]byte, e
 	request.Header.Add("Content-Type", "application/json")
 	request.Header.Add("x-api-key", credentials.APIKey)
 	request.Header.Add("device_id", credentials.DeviceId)
+	request.Header.Add("deviceid", credentials.DeviceId)
 	request.Header.Add("passkey", credentials.Passkey)
 
 	response, err := HTTPClient.Do(request)

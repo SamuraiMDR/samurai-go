@@ -101,8 +101,10 @@ func getSAS(payload string, destinationFilename string, suffix string, credentia
 	request.Header.Add("passkey", credentials.Passkey)
 	if credentials.IntegrationId != "" {
 		request.Header.Add("integration_id", credentials.IntegrationId)
+		request.Header.Add("integrationid", credentials.IntegrationId)
 	} else {
 		request.Header.Add("device_id", credentials.DeviceId)
+		request.Header.Add("deviceid", credentials.DeviceId)
 	}
 
 	response, err := HTTPClient.Do(request)
