@@ -270,7 +270,7 @@ func (client Client) SendFile(fd FileDetails) error {
 			if err != nil {
 				return err
 			} else {
-				err := fmt.Errorf(result.Message)
+				err := fmt.Errorf("%s", result.Message)
 				return err
 			}
 		} else {
