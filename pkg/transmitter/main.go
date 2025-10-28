@@ -106,6 +106,9 @@ func getSAS(payload string, destinationFilename string, suffix string, credentia
 		request.Header.Add("device_id", credentials.DeviceId)
 		request.Header.Add("deviceid", credentials.DeviceId)
 	}
+	for key, value := range credentials.ExtraHeaders {
+		request.Header.Add(key, value)
+	}
 
 	response, err := HTTPClient.Do(request)
 	if err != nil {

@@ -92,6 +92,9 @@ func sendRequest(body []byte, credentials credentials.APICredentials) ([]byte, e
 	request.Header.Add("device_id", credentials.DeviceId)
 	request.Header.Add("deviceid", credentials.DeviceId)
 	request.Header.Add("passkey", credentials.Passkey)
+	for key, value := range credentials.ExtraHeaders {
+		request.Header.Add(key, value)
+	}
 
 	response, err := HTTPClient.Do(request)
 	if err != nil {
