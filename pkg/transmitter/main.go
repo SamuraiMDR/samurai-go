@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -53,11 +54,33 @@ type control struct {
 var ErrUnknownPayload = errors.New("unknown payload")
 var ErrFileExists = errors.New("file already exists")
 
+// customKVRe enforces the same rules the payload API applies to a custom
+// key/value pair: lowercase letters only, length 1-20.
+var customKVRe = regexp.MustCompile(`^[a-z]{1,20}$`)
+
+// validateCustomKV mirrors the server-side validation so callers fail fast
+// instead of after a round trip. Both must be set together and match the
+// allowed pattern. Reserved-key collisions remain a server-side check.
+func validateCustomKV(key, value string) error {
+	if key == "" && value == "" {
+		return nil
+	}
+	if key == "" || value == "" {
+		return fmt.Errorf("customKey and customValue must be set together")
+	}
+	if !customKVRe.MatchString(key) || !customKVRe.MatchString(value) {
+		return fmt.Errorf("customKey/customValue must be lowercase [a-z], max length 20")
+	}
+	return nil
+}
+
 type sas struct {
-	Payload  string `json:"payload"`
-	Profile  string `json:"profile"`
-	Suffix   string `json:"suffix"`
-	Filename string `json:"filename"`
+	Payload     string `json:"payload"`
+	Profile     string `json:"profile"`
+	Suffix      string `json:"suffix"`
+	Filename    string `json:"filename"`
+	CustomKey   string `json:"customKey,omitempty"`
+	CustomValue string `json:"customValue,omitempty"`
 }
 
 type sasResult struct {
@@ -85,20 +108,9 @@ type FileDetails struct {
 func getSAS(payload string, destinationFilename string, suffix string, customKey string, customValue string, credentials credentials.APICredentials, settings Settings) (sasResult, error) {
 	var result sasResult
 
-	body, err := json.Marshal(sas{payload, settings.Profile, suffix, destinationFilename})
+	body, err := json.Marshal(sas{payload, settings.Profile, suffix, destinationFilename, customKey, customValue})
 	if err != nil {
 		return result, err
-	}
-	if customKey != "" {
-		var m map[string]interface{}
-		if err := json.Unmarshal(body, &m); err != nil {
-			return result, err
-		}
-		m[customKey] = customValue
-		body, err = json.Marshal(m)
-		if err != nil {
-			return result, err
-		}
 	}
 	HTTPClient := &http.Client{
 		Timeout: time.Second * 10,
@@ -176,6 +188,10 @@ func (client Client) SendFile(fd FileDetails) error {
 	}
 	if suffix == "" {
 		return fmt.Errorf("filename %v does not have a file suffix, please set fileSuffix", fd.SourceFilename)
+	}
+
+	if err := validateCustomKV(fd.CustomKey, fd.CustomValue); err != nil {
+		return fmt.Errorf("invalid custom key/value: %v", err)
 	}
 
 	result, err := getSAS(fd.PayloadType, fd.DestinationFilename, suffix, fd.CustomKey, fd.CustomValue, client.credentials, client.settings)
