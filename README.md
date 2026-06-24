@@ -50,7 +50,12 @@ func main() {
 
 	err = client.SendFile(transmitter.FileDetails{
 		SourceFilename:      filename,
+		DestinationFilename: destinationFilename,
 		PayloadType:         payloadType,
+		// Optional: CustomKey/CustomValue add a single custom key/value pair
+		// to the token-request body sent to the payload API.
+		// CustomKey:   "source",
+		// CustomValue: "example",
 	})
 	if err != nil {
 		log.Fatal(err)

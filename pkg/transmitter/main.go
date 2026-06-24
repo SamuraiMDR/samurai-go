@@ -78,14 +78,27 @@ type FileDetails struct {
 	DestinationFilename string
 	FileSuffix          string
 	PayloadType         string
+	CustomKey           string
+	CustomValue         string
 }
 
-func getSAS(payload string, destinationFilename string, suffix string, credentials credentials.APICredentials, settings Settings) (sasResult, error) {
+func getSAS(payload string, destinationFilename string, suffix string, customKey string, customValue string, credentials credentials.APICredentials, settings Settings) (sasResult, error) {
 	var result sasResult
 
 	body, err := json.Marshal(sas{payload, settings.Profile, suffix, destinationFilename})
 	if err != nil {
 		return result, err
+	}
+	if customKey != "" {
+		var m map[string]interface{}
+		if err := json.Unmarshal(body, &m); err != nil {
+			return result, err
+		}
+		m[customKey] = customValue
+		body, err = json.Marshal(m)
+		if err != nil {
+			return result, err
+		}
 	}
 	HTTPClient := &http.Client{
 		Timeout: time.Second * 10,
@@ -165,7 +178,7 @@ func (client Client) SendFile(fd FileDetails) error {
 		return fmt.Errorf("filename %v does not have a file suffix, please set fileSuffix", fd.SourceFilename)
 	}
 
-	result, err := getSAS(fd.PayloadType, fd.DestinationFilename, suffix, client.credentials, client.settings)
+	result, err := getSAS(fd.PayloadType, fd.DestinationFilename, suffix, fd.CustomKey, fd.CustomValue, client.credentials, client.settings)
 	if err == ErrUnknownPayload {
 		log.Warnf("Uploading file %v aborted since payload %v is not supported", fd.SourceFilename, fd.PayloadType)
 		return err

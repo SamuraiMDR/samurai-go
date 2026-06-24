@@ -71,6 +71,10 @@ func main() {
 		SourceFilename:      filename,
 		DestinationFilename: destinationFilename,
 		PayloadType:         payloadType,
+		// CustomKey and CustomValue add a single custom key/value pair to the
+		// token-request body sent to the payload API. Leave empty to omit.
+		// CustomKey:   "source",
+		// CustomValue: "example",
 	})
 	if err != nil {
 		log.Fatal(err)
