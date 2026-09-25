@@ -92,34 +92,8 @@ func NewTransmitterCredentials(configFile string) (credentials.APICredentials, e
 		return credentials.APICredentials{}, fmt.Errorf("settings file path is required")
 	}
 
-	err := validateCredentials(cred)
-	if err != nil {
+	if err := cred.Validate(); err != nil {
 		return credentials.APICredentials{}, err
 	}
 	return cred, nil
-}
-
-func validateCredentials(cred credentials.APICredentials) error {
-	checks := []struct {
-		bad    bool
-		errMsg string
-	}{
-		{cred.URL == "", "URL not defined"},
-		{cred.APIKey == "", "apiKey is undefined"},
-		{cred.Passkey == "", "passkey is undefined"},
-	}
-
-	for _, check := range checks {
-		if check.bad {
-			return fmt.Errorf("invalid credentials: %s", check.errMsg)
-		}
-	}
-
-	if cred.DeviceId == "" && cred.IntegrationId == "" {
-		return fmt.Errorf("invalid credentials, deviceId or integrationId needs to be defined")
-	}
-	if cred.DeviceId != "" && cred.IntegrationId != "" {
-		return fmt.Errorf("only one of deviceId or integrationId can be defined")
-	}
-	return nil
 }

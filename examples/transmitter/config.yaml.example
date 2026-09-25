@@ -1,5 +1,5 @@
 ---
 # Example config
 insecure: false
-debug: true
+debug: false
 profile: default

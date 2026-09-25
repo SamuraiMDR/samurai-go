@@ -17,7 +17,10 @@
 package main
 
 import (
+	"context"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/SamuraiMDR/samurai-go/examples/transmitter/config"
 	"github.com/SamuraiMDR/samurai-go/pkg/transmitter"
@@ -67,7 +70,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = client.SendFile(transmitter.FileDetails{
+	// Ctrl-C or SIGTERM cancels the upload. An S3 multipart upload is then
+	// aborted instead of leaving parts behind.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	err = client.SendFile(ctx, transmitter.FileDetails{
 		SourceFilename:      filename,
 		DestinationFilename: destinationFilename,
 		PayloadType:         payloadType,
