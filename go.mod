@@ -1,6 +1,6 @@
 module github.com/SamuraiMDR/samurai-go
 
-go 1.26.0
+go 1.26.6
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.23.1
