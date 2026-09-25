@@ -13,24 +13,24 @@ Transmitter client uploads a selected set of file types (payloads) to Samurai MD
 
 ### Installation
 ```
-go get github.com/SamuraiMDR/samurai-go@v1.0.17
+go get github.com/SamuraiMDR/samurai-go@latest
 ```
 
 ### Usage
-```
+```go
 package main
 
 import (
+	"context"
 	"log"
+	"os"
+	"os/signal"
 
 	"github.com/SamuraiMDR/samurai-go/pkg/credentials"
 	"github.com/SamuraiMDR/samurai-go/pkg/transmitter"
 )
 
 func main() {
-	filename := "/example/filename"
-	payloadType := "pcap"
-
 	credentials := credentials.APICredentials{
 		URL:      "https://...",
 		APIKey:   "apikey",
@@ -48,10 +48,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = client.SendFile(transmitter.FileDetails{
-		SourceFilename:      filename,
-		DestinationFilename: destinationFilename,
-		PayloadType:         payloadType,
+	// Cancelling the context stops the upload. An interrupted S3 multipart
+	// upload is aborted instead of leaving parts behind.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	err = client.SendFile(ctx, transmitter.FileDetails{
+		SourceFilename: "/example/filename.pcap",
+		PayloadType:    "pcap",
+		// Optional: DestinationFilename sets the name used in storage.
 		// Optional: CustomKey/CustomValue add a single custom key/value pair
 		// to the token-request body sent to the payload API.
 		// CustomKey:   "source",
@@ -61,44 +66,35 @@ func main() {
 		log.Fatal(err)
 	}
 }
-
 ```
+
+`SendFile` returns `transmitter.ErrFileExists` when the destination already
+exists and `transmitter.ErrUnknownPayload` when the payload type is not
+supported. Compare with `errors.Is`.
 
 ### Usage with generator package
 
 For a concrete implementation, view the WithSecure-Integration.
 
-```
-import {
-"github.com/SamuraiMDR/samurai-go/pkg/generator"
-}
+```go
+import (
+	"github.com/SamuraiMDR/samurai-go/pkg/generator"
+)
 
 func main() {
-	credentials := credentials.APICredentials{
-		URL:      transmit_api_url,
-		APIKey:   transmit_api_key,
-		Passkey:  transmit_api_passkey,
-		DeviceId: transmit_api_deviceid,
-	}
-
-	settings := transmitter.Settings{
-		Debug:   true,
-		Profile: "azure",
-	}
-
-	client, err := transmitter.NewClient(settings, credentials)
-	if err != nil {
-		log.Fatal(err)
-	}
+	// Create client as in the example above, with Profile "azure".
 
 	cim_alert := generator.GetBaseAlertV1()
 	cim_alert.Action = "BLOCK"
-	
+
 	integration_name := "xxx"
 
 	//Add evidence blob as evidence.json
 	cim_alert.SetBlobsProperties(integration_name, integration_name)
 	ws_as_json, err := json.Marshal(ws)
+	if err != nil {
+		log.Fatal(err)
+	}
 	cim_alert.AddJSONData(ws_as_json, "evidence", true)
 
 	cim_alert.Src = "n/a"
@@ -112,38 +108,32 @@ func main() {
 	cim_alert.Context["severity"] = "CRITICAL"
 
 	/* Set time fields */
-	t, err := time.Parse("2006-01-02T15:04:05.999Z", "2023-03-03 16:54") // just for example
-	if err != nil {
-		fmt.Fatalf("Unable to parse PersistenceTimestamp value %s, struct: %+v", ws.PersistenceTimestamp, ws)
+	cim_alert.AddTimeStampFields(time.Now())
+
+	// SetSha must run after every other field is set.
+	if err := cim_alert.SetSha(); err != nil {
+		log.Fatal(err)
 	}
-	cim_alert.AddTimeStampFields(t)
-	cim_alert.SetSha()
-
-	err = cim_alert.ValidateAlert()
-
-	if err != nil {
-		fmt.Fatalf("Validate failed due to '%v', alert cim: ========%+v======= b", err, cim_alert)
+	if err := cim_alert.ValidateAlert(); err != nil {
+		log.Fatalf("Validate failed: %v", err)
 	}
-
-	log.Debugf("Succeded in converting trigger %s to alert CIM, uploading alert", cim_alert.Name)
 
 	outp, err := json.Marshal(cim_alert)
 	if err != nil {
-		log.Errorf("Failed to convert to json due to %v, struct: %+v", err, cim_alert)
-		continue
+		log.Fatal(err)
 	}
 
 	fn := "/tmp/alert.json"
-	err = os.WriteFile(fn, outp, 0600)
-	if err != nil {
-		log.Errorf("Failed to write %s due to '%v'", fn, err)
-		continue
+	if err := os.WriteFile(fn, outp, 0600); err != nil {
+		log.Fatal(err)
 	}
 
-	err = client.SendFile(fn, "bouncer")
+	err = client.SendFile(ctx, transmitter.FileDetails{
+		SourceFilename: fn,
+		PayloadType:    "bouncer",
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
 }
-
 ```
