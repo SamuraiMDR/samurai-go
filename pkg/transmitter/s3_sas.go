@@ -85,14 +85,7 @@ func (client Client) sendRequest(body []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	request.Header.Add("Content-Type", "application/json")
-	request.Header.Add("x-api-key", credentials.APIKey)
-	request.Header.Add("device_id", credentials.DeviceId)
-	request.Header.Add("deviceid", credentials.DeviceId)
-	request.Header.Add("passkey", credentials.Passkey)
-	for key, value := range credentials.ExtraHeaders {
-		request.Header.Add(key, value)
-	}
+	setAPIHeaders(request, credentials)
 
 	response, err := HTTPClient.Do(request)
 	if err != nil {

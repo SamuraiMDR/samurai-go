@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 
@@ -103,5 +104,62 @@ func TestRedirectsAreNotFollowed(t *testing.T) {
 	}
 	if targetHit.Load() {
 		t.Fatal("redirect target received a request carrying the API credentials")
+	}
+}
+
+func TestAPIHeaders(t *testing.T) {
+	var mu sync.Mutex
+	var seen []http.Header
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		seen = append(seen, r.Header.Clone())
+		mu.Unlock()
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	client, err := NewClient(Settings{AllowInsecureTLS: true}, credentials.APICredentials{
+		URL:           srv.URL,
+		APIKey:        "key",
+		Passkey:       "pass",
+		IntegrationId: "integration",
+		ExtraHeaders: map[string]string{
+			"x-api-key": "override",
+			"Passkey":   "override",
+			"X-Tenant":  "tenant",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// getSAS covers the SAS request, sendRequest covers the S3 multipart calls.
+	if _, err := client.getSAS("bouncer", "", "json", "", ""); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := client.sendRequest([]byte("{}")); err != nil {
+		t.Fatal(err)
+	}
+
+	want := map[string]string{
+		"X-Api-Key":      "key",
+		"Passkey":        "pass",
+		"Integration_id": "integration",
+		"Integrationid":  "integration",
+		"X-Tenant":       "tenant",
+	}
+	if len(seen) != 2 {
+		t.Fatalf("got %d requests, want 2", len(seen))
+	}
+	for i, h := range seen {
+		for name, value := range want {
+			if got := h.Values(name); len(got) != 1 || got[0] != value {
+				t.Errorf("request %d: %s = %q, want [%q]", i, name, got, value)
+			}
+		}
+		for _, name := range []string{"Device_id", "Deviceid"} {
+			if got := h.Values(name); len(got) != 0 {
+				t.Errorf("request %d: unexpected %s = %q for an integration id client", i, name, got)
+			}
+		}
 	}
 }

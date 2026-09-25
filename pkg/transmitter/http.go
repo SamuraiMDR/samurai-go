@@ -21,6 +21,8 @@ import (
 	"errors"
 	"net/http"
 	"time"
+
+	"github.com/SamuraiMDR/samurai-go/pkg/credentials"
 )
 
 // errRedirect is returned instead of following a redirect. Go forwards custom
@@ -49,5 +51,23 @@ func (client Client) httpClient(timeout time.Duration) *http.Client {
 		CheckRedirect: func(*http.Request, []*http.Request) error {
 			return errRedirect
 		},
+	}
+}
+
+// setAPIHeaders sets the headers for a payload API request. ExtraHeaders are
+// applied first so they can never replace or duplicate the auth headers.
+func setAPIHeaders(request *http.Request, credentials credentials.APICredentials) {
+	for key, value := range credentials.ExtraHeaders {
+		request.Header.Set(key, value)
+	}
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("x-api-key", credentials.APIKey)
+	request.Header.Set("passkey", credentials.Passkey)
+	if credentials.IntegrationId != "" {
+		request.Header.Set("integration_id", credentials.IntegrationId)
+		request.Header.Set("integrationid", credentials.IntegrationId)
+	} else {
+		request.Header.Set("device_id", credentials.DeviceId)
+		request.Header.Set("deviceid", credentials.DeviceId)
 	}
 }

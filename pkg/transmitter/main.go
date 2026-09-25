@@ -120,19 +120,7 @@ func (client Client) getSAS(payload string, destinationFilename string, suffix s
 	if err != nil {
 		return result, err
 	}
-	request.Header.Add("Content-Type", "application/json")
-	request.Header.Add("x-api-key", credentials.APIKey)
-	request.Header.Add("passkey", credentials.Passkey)
-	if credentials.IntegrationId != "" {
-		request.Header.Add("integration_id", credentials.IntegrationId)
-		request.Header.Add("integrationid", credentials.IntegrationId)
-	} else {
-		request.Header.Add("device_id", credentials.DeviceId)
-		request.Header.Add("deviceid", credentials.DeviceId)
-	}
-	for key, value := range credentials.ExtraHeaders {
-		request.Header.Add(key, value)
-	}
+	setAPIHeaders(request, credentials)
 
 	response, err := HTTPClient.Do(request)
 	if err != nil {
