@@ -91,6 +91,7 @@ func newPayloadAPI(t *testing.T, sasResponse map[string]string, signedURL string
 const unreachable = "https://127.0.0.1:1/bucket/key?X-Amz-Signature=" + secret + "&sig=" + secret
 
 func TestS3UploadDoesNotLogSignedURL(t *testing.T) {
+	smallParts(t, 1024)
 	logs := captureLogs(t)
 	api := newPayloadAPI(t, map[string]string{"profile_type": "s3", "key": "k", "upload_id": "u"}, unreachable)
 	client := newTestClient(t, api.URL, true)
