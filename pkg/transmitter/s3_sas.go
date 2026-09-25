@@ -188,13 +188,13 @@ func (client Client) partsTransmitter(ChunkChan <-chan transmitterPayload, contr
 
 			request, err := http.NewRequest(http.MethodPut, part.signed_url, part.chunk)
 			if err != nil {
-				log.Errorln(err)
+				log.Errorln(redactError(err, part.signed_url))
 				HTTPClient.CloseIdleConnections()
 				continue
 			}
 			response, err := HTTPClient.Do(request)
 			if err != nil {
-				log.Errorln(err)
+				log.Errorln(redactError(err, part.signed_url))
 				HTTPClient.CloseIdleConnections()
 				continue
 			}

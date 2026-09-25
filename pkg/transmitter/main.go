@@ -190,7 +190,7 @@ func (client Client) SendFile(fd FileDetails) error {
 		return fmt.Errorf("could not generate SAS token: %v", err)
 	}
 	if result.Type == "azure" {
-		log.Debugf("Got signed url for %v: %v", fd.SourceFilename, result.SASURL)
+		log.Debugf("Got signed url for %v: %v", fd.SourceFilename, redactURL(result.SASURL))
 		err := uploadToAzureSAS(fd.SourceFilename, result, client.settings)
 		if err != nil {
 			return err

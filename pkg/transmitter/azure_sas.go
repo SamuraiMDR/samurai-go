@@ -50,13 +50,14 @@ func uploadToAzureSAS(filename string, sr sasResult, settings Settings) error {
 		},
 	})
 	if err != nil {
-		return err
+		return redactError(err, sr.SASURL)
 	}
 
 	for retry := 0; retry < settings.MaxRetries; retry++ {
 		log.Debugf("Try %v of %v", retry+1, settings.MaxRetries)
 		// Check if the blob exists by getting its properties
 		_, err = client.GetProperties(context.TODO(), nil)
+		err = redactError(err, sr.SASURL)
 		if err != nil {
 			log.Debugf("Properties error: %v", err)
 			var storageErr *azcore.ResponseError
@@ -67,11 +68,12 @@ func uploadToAzureSAS(filename string, sr sasResult, settings Settings) error {
 						BlockSize:   int64(104857600),
 						Concurrency: uint16(3),
 					})
+				err = redactError(err, sr.SASURL)
 				if err != nil {
 					log.Errorf("failed to upload file: %v, blob_id %v. Try %v of %v", err, sr.BlobID, retry+1, settings.MaxRetries)
 				} else {
 					if settings.Debug {
-						log.Debugf("Uploaded file %v, blob_id %v to %v, total %v. Try %v of %v", filename, sr.BlobID, sr.SASURL, bytesize.ByteSize(fileSize).String(), retry+1, settings.MaxRetries)
+						log.Debugf("Uploaded file %v, blob_id %v to %v, total %v. Try %v of %v", filename, sr.BlobID, redactURL(sr.SASURL), bytesize.ByteSize(fileSize).String(), retry+1, settings.MaxRetries)
 					} else {
 						log.Infof("Uploaded file %v, blob_id %v, total %v. Try %v of %v", filename, sr.BlobID, bytesize.ByteSize(fileSize).String(), retry+1, settings.MaxRetries)
 					}
