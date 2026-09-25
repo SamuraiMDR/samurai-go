@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -127,12 +126,15 @@ func (client Client) getSAS(payload string, destinationFilename string, suffix s
 		return result, err
 	}
 	defer response.Body.Close()
-	bodyBytes, err := io.ReadAll(response.Body)
+	bodyBytes, truncated, err := readResponseBody(response.Body)
 	if err != nil {
 		return result, err
 	}
 	switch response.StatusCode {
 	case 200:
+		if truncated {
+			return result, errResponseTooLarge
+		}
 		err := json.Unmarshal(bodyBytes, &result)
 		if err != nil {
 			return result, err
@@ -140,7 +142,7 @@ func (client Client) getSAS(payload string, destinationFilename string, suffix s
 	case 415:
 		return result, ErrUnknownPayload
 	default:
-		err := fmt.Errorf("status code: %d, Body: %v", response.StatusCode, string(bodyBytes))
+		err := fmt.Errorf("status code: %d, body: %s", response.StatusCode, errorBody(bodyBytes))
 		return result, err
 	}
 	return result, nil

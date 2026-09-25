@@ -19,6 +19,8 @@ package transmitter
 import (
 	"crypto/tls"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -71,3 +73,36 @@ func setAPIHeaders(request *http.Request, credentials credentials.APICredentials
 		request.Header.Set("deviceid", credentials.DeviceId)
 	}
 }
+
+const (
+	// maxResponseSize caps how much of a payload API response is read. Real
+	// responses are a few hundred bytes of JSON.
+	maxResponseSize = 1 << 20
+	// maxErrorBodySize caps how much of an error response ends up in the
+	// returned error, and so in the caller's logs.
+	maxErrorBodySize = 512
+)
+
+// readResponseBody reads at most maxResponseSize bytes. truncated reports
+// whether the body was longer than that.
+func readResponseBody(body io.Reader) (data []byte, truncated bool, err error) {
+	data, err = io.ReadAll(io.LimitReader(body, maxResponseSize+1))
+	if len(data) > maxResponseSize {
+		return data[:maxResponseSize], true, err
+	}
+	return data, false, err
+}
+
+// errorBody formats an error response body for an error message. It is
+// quoted so that control characters and newlines cannot forge log lines, and
+// truncated to maxErrorBodySize bytes.
+func errorBody(data []byte) string {
+	if len(data) > maxErrorBodySize {
+		return fmt.Sprintf("%q (truncated)", data[:maxErrorBodySize])
+	}
+	return fmt.Sprintf("%q", data)
+}
+
+// errResponseTooLarge is returned when a successful response is larger than
+// maxResponseSize.
+var errResponseTooLarge = fmt.Errorf("response body exceeds %d bytes", maxResponseSize)

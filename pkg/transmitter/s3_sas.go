@@ -93,14 +93,17 @@ func (client Client) sendRequest(body []byte) ([]byte, error) {
 	}
 	defer response.Body.Close()
 
-	bodyBytes, err := io.ReadAll(response.Body)
+	bodyBytes, truncated, err := readResponseBody(response.Body)
 	if err != nil {
 		return nil, err
 	}
 
 	if response.StatusCode != 200 {
-		err := fmt.Errorf("status code: %d\n%v", response.StatusCode, string(bodyBytes))
+		err := fmt.Errorf("status code: %d, body: %s", response.StatusCode, errorBody(bodyBytes))
 		return nil, err
+	}
+	if truncated {
+		return nil, errResponseTooLarge
 	}
 
 	return bodyBytes, nil

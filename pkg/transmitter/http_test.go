@@ -178,3 +178,75 @@ func TestNewClientRejectsInvalidCredentials(t *testing.T) {
 		t.Fatalf("NewClient error = %v, want ErrInvalidCredentials", err)
 	}
 }
+
+func TestReadResponseBody(t *testing.T) {
+	data, truncated, err := readResponseBody(strings.NewReader(strings.Repeat("a", maxResponseSize)))
+	if err != nil || truncated || len(data) != maxResponseSize {
+		t.Fatalf("body of exactly the limit: len=%d truncated=%v err=%v", len(data), truncated, err)
+	}
+	data, truncated, err = readResponseBody(strings.NewReader(strings.Repeat("a", maxResponseSize+10)))
+	if err != nil || !truncated || len(data) != maxResponseSize {
+		t.Fatalf("body over the limit: len=%d truncated=%v err=%v", len(data), truncated, err)
+	}
+}
+
+func TestErrorBody(t *testing.T) {
+	if got := errorBody([]byte("bad\nrequest")); got != `"bad\nrequest"` {
+		t.Fatalf("errorBody did not quote the newline: %s", got)
+	}
+	got := errorBody([]byte(strings.Repeat("x", maxErrorBodySize+100)))
+	if !strings.HasSuffix(got, "(truncated)") || len(got) > maxErrorBodySize+20 {
+		t.Fatalf("errorBody did not truncate: len=%d", len(got))
+	}
+}
+
+func TestAPIResponseLimits(t *testing.T) {
+	cases := []struct {
+		name   string
+		status int
+		body   string
+		check  func(t *testing.T, err error)
+	}{
+		{
+			name:   "error body is quoted and truncated",
+			status: http.StatusInternalServerError,
+			body:   "line one\nlevel=error msg=forged\n" + strings.Repeat("x", 4096),
+			check: func(t *testing.T, err error) {
+				if err == nil || !strings.Contains(err.Error(), "status code: 500") {
+					t.Fatalf("error = %v, want status code 500", err)
+				}
+				if strings.Contains(err.Error(), "\n") {
+					t.Fatalf("error contains a raw newline: %q", err)
+				}
+				if len(err.Error()) > maxErrorBodySize+100 {
+					t.Fatalf("error is %d bytes, want it truncated", len(err.Error()))
+				}
+			},
+		},
+		{
+			name:   "oversized success response is rejected",
+			status: http.StatusOK,
+			body:   `{"signed_url":"` + strings.Repeat("x", maxResponseSize) + `"}`,
+			check: func(t *testing.T, err error) {
+				if !errors.Is(err, errResponseTooLarge) {
+					t.Fatalf("error = %v, want errResponseTooLarge", err)
+				}
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(c.status)
+				_, _ = w.Write([]byte(c.body))
+			}))
+			t.Cleanup(srv.Close)
+			client := newTestClient(t, srv.URL, true)
+
+			_, err := client.getSAS("bouncer", "", "json", "", "")
+			c.check(t, err)
+			_, err = client.sendRequest([]byte("{}"))
+			c.check(t, err)
+		})
+	}
+}
