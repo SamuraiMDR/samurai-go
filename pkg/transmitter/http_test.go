@@ -123,14 +123,17 @@ func TestAPIHeaders(t *testing.T) {
 		APIKey:        "key",
 		Passkey:       "pass",
 		IntegrationId: "integration",
-		ExtraHeaders: map[string]string{
-			"x-api-key": "override",
-			"Passkey":   "override",
-			"X-Tenant":  "tenant",
-		},
+		ExtraHeaders:  map[string]string{"X-Tenant": "tenant"},
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	// NewClient rejects reserved ExtraHeaders. Inject them afterwards to check
+	// that setAPIHeaders still lets the auth headers win.
+	client.credentials.ExtraHeaders = map[string]string{
+		"x-api-key": "override",
+		"Passkey":   "override",
+		"X-Tenant":  "tenant",
 	}
 	// getSAS covers the SAS request, sendRequest covers the S3 multipart calls.
 	if _, err := client.getSAS("bouncer", "", "json", "", ""); err != nil {
@@ -161,5 +164,17 @@ func TestAPIHeaders(t *testing.T) {
 				t.Errorf("request %d: unexpected %s = %q for an integration id client", i, name, got)
 			}
 		}
+	}
+}
+
+func TestNewClientRejectsInvalidCredentials(t *testing.T) {
+	_, err := NewClient(Settings{}, credentials.APICredentials{
+		URL:      "http://api.example.com",
+		APIKey:   "key",
+		Passkey:  "pass",
+		DeviceId: "device",
+	})
+	if !errors.Is(err, credentials.ErrInvalidCredentials) {
+		t.Fatalf("NewClient error = %v, want ErrInvalidCredentials", err)
 	}
 }

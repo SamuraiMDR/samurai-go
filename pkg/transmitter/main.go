@@ -147,6 +147,9 @@ func (client Client) getSAS(payload string, destinationFilename string, suffix s
 }
 
 func NewClient(settings Settings, credentials credentials.APICredentials) (Client, error) {
+	if err := credentials.Validate(); err != nil {
+		return Client{}, err
+	}
 	client := Client{
 		settings:    settings,
 		credentials: credentials,
