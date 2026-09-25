@@ -1,14 +1,12 @@
 package generator
 
 import (
-	"crypto/sha1"
+	"crypto/sha1" // #nosec G505 -- see SetSha
 	b64 "encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type MetaDataV1 struct {
@@ -70,18 +68,26 @@ func GetBaseAlertV1() AlertV1 {
 	return alert
 }
 
-func (a *AlertV1) SetSha() {
+// SetSha sets Sha to the SHA-1 of the marshalled alert, and Context["pcapid"]
+// to the same value when blobs are attached. It must run after every other
+// field is set. It fails if the alert cannot be marshalled, for example when
+// Context holds a NaN or a value JSON cannot encode.
+//
+// SHA-1 is the alert and pcap identifier the Samurai backend expects. It is
+// not used as a security control.
+func (a *AlertV1) SetSha() error {
 	outp, err := json.Marshal(a)
 	if err != nil {
-		log.Fatalf("Failed to run sha: '%v' on struct: %+v", err, a)
+		return fmt.Errorf("could not marshal alert: %w", err)
 	}
-	hasher := sha1.New()
+	hasher := sha1.New() // #nosec G401 -- identifier required by the backend, see above
 	hasher.Write(outp)
 	a.Sha = hex.EncodeToString(hasher.Sum(nil))
 
 	if a.Blobs != nil {
 		a.Context["pcapid"] = a.Sha
 	}
+	return nil
 }
 
 func (a *AlertV1) SetBlobsProperties(site string, src string) {
