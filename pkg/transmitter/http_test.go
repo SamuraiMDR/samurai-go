@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/SamuraiMDR/samurai-go/pkg/credentials"
+	"github.com/SamuraiMDR/samurai-go/v2/pkg/credentials"
 )
 
 // newTestServer returns a TLS server with a self-signed certificate that

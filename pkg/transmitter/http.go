@@ -25,7 +25,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/SamuraiMDR/samurai-go/pkg/credentials"
+	"github.com/SamuraiMDR/samurai-go/v2/pkg/credentials"
 )
 
 // errRedirect is returned instead of following a redirect. Go forwards custom

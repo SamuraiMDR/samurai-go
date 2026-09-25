@@ -23,7 +23,7 @@ import (
 	"syscall"
 
 	"github.com/SamuraiMDR/samurai-go/examples/transmitter/config"
-	"github.com/SamuraiMDR/samurai-go/pkg/transmitter"
+	"github.com/SamuraiMDR/samurai-go/v2/pkg/transmitter"
 	log "github.com/sirupsen/logrus"
 )
 

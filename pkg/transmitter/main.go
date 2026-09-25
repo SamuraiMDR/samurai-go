@@ -28,7 +28,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SamuraiMDR/samurai-go/pkg/credentials"
+	"github.com/SamuraiMDR/samurai-go/v2/pkg/credentials"
 	log "github.com/sirupsen/logrus"
 )
 

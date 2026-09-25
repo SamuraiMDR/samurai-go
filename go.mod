@@ -1,4 +1,4 @@
-module github.com/SamuraiMDR/samurai-go
+module github.com/SamuraiMDR/samurai-go/v2
 
 go 1.26.6
 

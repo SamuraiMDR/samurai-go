@@ -13,7 +13,7 @@ Transmitter client uploads a selected set of file types (payloads) to Samurai MD
 
 ### Installation
 ```
-go get github.com/SamuraiMDR/samurai-go@latest
+go get github.com/SamuraiMDR/samurai-go/v2@latest
 ```
 
 ### Usage
@@ -26,8 +26,8 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/SamuraiMDR/samurai-go/pkg/credentials"
-	"github.com/SamuraiMDR/samurai-go/pkg/transmitter"
+	"github.com/SamuraiMDR/samurai-go/v2/pkg/credentials"
+	"github.com/SamuraiMDR/samurai-go/v2/pkg/transmitter"
 )
 
 func main() {
@@ -78,7 +78,7 @@ For a concrete implementation, view the WithSecure-Integration.
 
 ```go
 import (
-	"github.com/SamuraiMDR/samurai-go/pkg/generator"
+	"github.com/SamuraiMDR/samurai-go/v2/pkg/generator"
 )
 
 func main() {
