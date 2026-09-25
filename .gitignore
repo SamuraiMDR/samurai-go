@@ -29,3 +29,4 @@ go.work
 examples/transmitter/transmitter
 
 **/.vscode
+/CLAUDE.md
