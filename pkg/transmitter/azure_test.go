@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 )
 
@@ -146,5 +147,33 @@ func TestAzureUploadGivesUpAfterMaxRetries(t *testing.T) {
 	}
 	if f.puts != 3 {
 		t.Fatalf("puts = %d, want 3", f.puts)
+	}
+}
+
+func TestAzureUploadRejectsPlainHTTPSASURL(t *testing.T) {
+	var blobRequests atomic.Int32
+	blob := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		blobRequests.Add(1)
+	}))
+	t.Cleanup(blob.Close)
+	api := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"profile_type": "azure",
+			"sas_url":      blob.URL + "/account/container/blob.json?sig=secret",
+		})
+	}))
+	t.Cleanup(api.Close)
+	client := newTestClient(t, api.URL, true)
+	file := writeTempFile(t, "payload.json", []byte("{}"))
+
+	err := client.SendFile(t.Context(), FileDetails{SourceFilename: file, PayloadType: "bouncer"})
+	if err == nil || !strings.Contains(err.Error(), "must use https") {
+		t.Fatalf("SendFile error = %v, want an https error", err)
+	}
+	if strings.Contains(err.Error(), "secret") {
+		t.Fatalf("error leaks the SAS signature: %v", err)
+	}
+	if blobRequests.Load() != 0 {
+		t.Fatalf("blob endpoint received %d requests over plain http", blobRequests.Load())
 	}
 }

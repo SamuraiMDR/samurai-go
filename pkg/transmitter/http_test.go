@@ -250,3 +250,32 @@ func TestAPIResponseLimits(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateUploadURL(t *testing.T) {
+	cases := map[string]string{
+		"https://acct.blob.core.windows.net/c/b?sig=x":             "",
+		"https://minio.internal:9000/bucket/key?X-Amz-Signature=x": "",
+		"": "empty",
+		"http://acct.blob.core.windows.net/c/b?sig=x": "must use https",
+		"ftp://example.com/x":                         "must use https",
+		"/relative/path?sig=x":                        "must use https",
+		"https:///no-host?sig=x":                      "no host",
+		"https://u:p@example.com/x":                   "user info",
+		"https://example.com/%zz?sig=":                "could not be parsed",
+	}
+	for in, want := range cases {
+		err := validateUploadURL(in)
+		if want == "" {
+			if err != nil {
+				t.Errorf("validateUploadURL(%q) = %v, want nil", in, err)
+			}
+			continue
+		}
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("validateUploadURL(%q) = %v, want it to contain %q", in, err, want)
+		}
+		if err != nil && strings.Contains(err.Error(), "sig=") {
+			t.Errorf("validateUploadURL(%q) leaks the query: %v", in, err)
+		}
+	}
+}

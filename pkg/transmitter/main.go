@@ -184,6 +184,9 @@ func (client Client) SendFile(ctx context.Context, fd FileDetails) error {
 		return fmt.Errorf("could not generate SAS token: %w", err)
 	}
 	if result.Type == "azure" {
+		if err := validateUploadURL(result.SASURL); err != nil {
+			return fmt.Errorf("payload api returned an invalid sas url: %w", err)
+		}
 		log.Debugf("Got signed url for %v: %v", fd.SourceFilename, redactURL(result.SASURL))
 		err := client.uploadToAzureSAS(ctx, fd.SourceFilename, result)
 		if err != nil {

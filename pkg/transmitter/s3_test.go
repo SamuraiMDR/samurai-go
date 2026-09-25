@@ -34,6 +34,7 @@ type fakeS3 struct {
 	failTimes     map[int]int  // part -> number of attempts to fail before succeeding
 	failSignedURL map[int]bool // part -> GET_SIGNED_URL always fails
 	noETag        bool
+	httpSignedURL bool // hand out plain http signed URLs
 	completed     []parts
 	completeCalls int
 	abortCalls    int
@@ -88,9 +89,11 @@ func (f *fakeS3) handle(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "boom", http.StatusInternalServerError)
 			return
 		}
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"signed_url": fmt.Sprintf("%s/upload/%d?X-Amz-Signature=sig", f.srv.URL, body.Part),
-		})
+		signed := fmt.Sprintf("%s/upload/%d?X-Amz-Signature=sig", f.srv.URL, body.Part)
+		if f.httpSignedURL {
+			signed = strings.Replace(signed, "https://", "http://", 1)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]string{"signed_url": signed})
 	case "COMPLETE_MULTIPART_UPLOAD":
 		f.completeCalls++
 		f.completed = body.Parts
@@ -187,6 +190,7 @@ func TestS3UploadFailureAborts(t *testing.T) {
 		{"part keeps failing", func(f *fakeS3) { f.failTimes[3] = maxRetry }, "part 3 failed after"},
 		{"signed url keeps failing", func(f *fakeS3) { f.failSignedURL[2] = true }, "could not get signed url"},
 		{"part has no etag", func(f *fakeS3) { f.noETag = true }, "no ETag"},
+		{"signed url is plain http", func(f *fakeS3) { f.httpSignedURL = true }, "upload url must use https"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -200,6 +204,9 @@ func TestS3UploadFailureAborts(t *testing.T) {
 			err := client.SendFile(t.Context(), FileDetails{SourceFilename: file, PayloadType: "pcap"})
 			if err == nil || !strings.Contains(err.Error(), c.want) {
 				t.Fatalf("SendFile error = %v, want it to contain %q", err, c.want)
+			}
+			if f.httpSignedURL && len(f.attempts) != 0 {
+				t.Fatalf("parts were sent to a plain http url: %v", f.attempts)
 			}
 			if f.completeCalls != 0 || f.abortCalls != 1 {
 				t.Fatalf("complete called %d times, abort %d times; want 0 and 1", f.completeCalls, f.abortCalls)

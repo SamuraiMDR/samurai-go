@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/SamuraiMDR/samurai-go/pkg/credentials"
@@ -106,3 +107,26 @@ func errorBody(data []byte) string {
 // errResponseTooLarge is returned when a successful response is larger than
 // maxResponseSize.
 var errResponseTooLarge = fmt.Errorf("response body exceeds %d bytes", maxResponseSize)
+
+// validateUploadURL checks a signed upload URL returned by the payload API
+// before any file content is sent to it. The file must only ever travel over
+// https. Errors do not include the URL, since its query string is a credential.
+func validateUploadURL(rawURL string) error {
+	if rawURL == "" {
+		return errors.New("upload url is empty")
+	}
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return errors.New("upload url could not be parsed")
+	}
+	if u.Scheme != "https" {
+		return fmt.Errorf("upload url must use https, got %q", u.Scheme)
+	}
+	if u.Host == "" {
+		return errors.New("upload url has no host")
+	}
+	if u.User != nil {
+		return errors.New("upload url must not contain user info")
+	}
+	return nil
+}

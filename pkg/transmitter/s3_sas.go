@@ -301,6 +301,9 @@ func (client Client) putPart(ctx context.Context, file *os.File, sr sasResult, p
 	if err != nil {
 		return "", fmt.Errorf("could not get signed url: %w", err)
 	}
+	if err := validateUploadURL(signed.SignedURL); err != nil {
+		return "", fmt.Errorf("payload api returned an invalid signed url: %w", err)
+	}
 
 	var body io.Reader = http.NoBody
 	if length > 0 {
