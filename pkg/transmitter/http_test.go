@@ -56,7 +56,7 @@ func TestInsecureTLSIsScopedToClient(t *testing.T) {
 	file := writeTempFile(t, "payload.json", []byte("{}"))
 
 	insecure := newTestClient(t, srv.URL, true)
-	err := insecure.SendFile(FileDetails{SourceFilename: file, PayloadType: "bouncer"})
+	err := insecure.SendFile(t.Context(), FileDetails{SourceFilename: file, PayloadType: "bouncer"})
 	if err == nil || !strings.Contains(err.Error(), "unknown result type") {
 		t.Fatalf("insecure client should reach the self-signed server, got %v", err)
 	}
@@ -66,7 +66,7 @@ func TestInsecureTLSIsScopedToClient(t *testing.T) {
 	}
 
 	secure := newTestClient(t, srv.URL, false)
-	err = secure.SendFile(FileDetails{SourceFilename: file, PayloadType: "bouncer"})
+	err = secure.SendFile(t.Context(), FileDetails{SourceFilename: file, PayloadType: "bouncer"})
 	if err == nil || !strings.Contains(err.Error(), "certificate") {
 		t.Fatalf("secure client must reject the self-signed server, got %v", err)
 	}
@@ -96,10 +96,10 @@ func TestRedirectsAreNotFollowed(t *testing.T) {
 	t.Cleanup(origin.Close)
 
 	client := newTestClient(t, origin.URL, true)
-	if _, err := client.getSAS("bouncer", "", "json", "", ""); !errors.Is(err, errRedirect) {
+	if _, err := client.getSAS(t.Context(), "bouncer", "", "json", "", ""); !errors.Is(err, errRedirect) {
 		t.Fatalf("getSAS error = %v, want errRedirect", err)
 	}
-	if _, err := client.sendRequest([]byte("{}")); !errors.Is(err, errRedirect) {
+	if _, err := client.sendRequest(t.Context(), []byte("{}")); !errors.Is(err, errRedirect) {
 		t.Fatalf("sendRequest error = %v, want errRedirect", err)
 	}
 	if targetHit.Load() {
@@ -136,10 +136,10 @@ func TestAPIHeaders(t *testing.T) {
 		"X-Tenant":  "tenant",
 	}
 	// getSAS covers the SAS request, sendRequest covers the S3 multipart calls.
-	if _, err := client.getSAS("bouncer", "", "json", "", ""); err != nil {
+	if _, err := client.getSAS(t.Context(), "bouncer", "", "json", "", ""); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := client.sendRequest([]byte("{}")); err != nil {
+	if _, err := client.sendRequest(t.Context(), []byte("{}")); err != nil {
 		t.Fatal(err)
 	}
 
@@ -243,9 +243,9 @@ func TestAPIResponseLimits(t *testing.T) {
 			t.Cleanup(srv.Close)
 			client := newTestClient(t, srv.URL, true)
 
-			_, err := client.getSAS("bouncer", "", "json", "", "")
+			_, err := client.getSAS(t.Context(), "bouncer", "", "json", "", "")
 			c.check(t, err)
-			_, err = client.sendRequest([]byte("{}"))
+			_, err = client.sendRequest(t.Context(), []byte("{}"))
 			c.check(t, err)
 		})
 	}

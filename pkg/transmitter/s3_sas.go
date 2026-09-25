@@ -18,6 +18,7 @@ package transmitter
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -76,12 +77,12 @@ type transmitterPayload struct {
 	remaining  int
 }
 
-func (client Client) sendRequest(body []byte) ([]byte, error) {
+func (client Client) sendRequest(ctx context.Context, body []byte) ([]byte, error) {
 	credentials := client.credentials
 	HTTPClient := client.httpClient(time.Second * 10)
 	defer HTTPClient.CloseIdleConnections()
 
-	request, err := http.NewRequest("POST", credentials.URL+"/cts/payload", bytes.NewBuffer(body))
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, credentials.URL+"/cts/payload", bytes.NewBuffer(body))
 	if err != nil {
 		return nil, err
 	}
@@ -109,14 +110,14 @@ func (client Client) sendRequest(body []byte) ([]byte, error) {
 	return bodyBytes, nil
 }
 
-func (client Client) getSignedURL(partData sasResult, part int) (signedURLMessage, error) {
+func (client Client) getSignedURL(ctx context.Context, partData sasResult, part int) (signedURLMessage, error) {
 	var result signedURLMessage
 	body, err := json.Marshal(signedURL{"GET_SIGNED_URL", partData.Key, partData.UploadId, part})
 	if err != nil {
 		return result, err
 	}
 
-	bodyBytes, err := client.sendRequest(body)
+	bodyBytes, err := client.sendRequest(ctx, body)
 	if err != nil {
 		return result, err
 	}
@@ -129,14 +130,14 @@ func (client Client) getSignedURL(partData sasResult, part int) (signedURLMessag
 	return result, nil
 }
 
-func (client Client) completeUpload(partData sasResult, parts []parts) (completeMultipartUploadMessage, error) {
+func (client Client) completeUpload(ctx context.Context, partData sasResult, parts []parts) (completeMultipartUploadMessage, error) {
 	var result completeMultipartUploadMessage
 	body, err := json.Marshal(completeMultipartUpload{"COMPLETE_MULTIPART_UPLOAD", partData.Key, partData.UploadId, parts})
 	if err != nil {
 		return result, err
 	}
 
-	bodyBytes, err := client.sendRequest(body)
+	bodyBytes, err := client.sendRequest(ctx, body)
 	if err != nil {
 		return result, err
 	}
@@ -149,14 +150,14 @@ func (client Client) completeUpload(partData sasResult, parts []parts) (complete
 	return result, nil
 }
 
-func (client Client) abortMultipartUpload(partData sasResult) (abortMultipartUploadMessage, error) {
+func (client Client) abortMultipartUpload(ctx context.Context, partData sasResult) (abortMultipartUploadMessage, error) {
 	var result abortMultipartUploadMessage
 	body, err := json.Marshal(abortedMultipartUpload{"ABORT_MULTIPART_UPLOAD", partData.Key, partData.UploadId})
 	if err != nil {
 		return result, err
 	}
 
-	bodyBytes, err := client.sendRequest(body)
+	bodyBytes, err := client.sendRequest(ctx, body)
 	if err != nil {
 		return result, err
 	}
@@ -169,7 +170,7 @@ func (client Client) abortMultipartUpload(partData sasResult) (abortMultipartUpl
 	return result, nil
 }
 
-func (client Client) partsTransmitter(ChunkChan <-chan transmitterPayload, control control) {
+func (client Client) partsTransmitter(ctx context.Context, ChunkChan <-chan transmitterPayload, control control) {
 	for part := range ChunkChan {
 		for i := 0; i <= maxRetry; i++ {
 			if i >= maxRetry {
@@ -189,7 +190,7 @@ func (client Client) partsTransmitter(ChunkChan <-chan transmitterPayload, contr
 			parts := parts{}
 			HTTPClient := client.httpClient(time.Second * 600)
 
-			request, err := http.NewRequest(http.MethodPut, part.signed_url, part.chunk)
+			request, err := http.NewRequestWithContext(ctx, http.MethodPut, part.signed_url, part.chunk)
 			if err != nil {
 				log.Errorln(redactError(err, part.signed_url))
 				HTTPClient.CloseIdleConnections()

@@ -18,6 +18,7 @@ package transmitter
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -104,7 +105,7 @@ type FileDetails struct {
 	CustomValue         string
 }
 
-func (client Client) getSAS(payload string, destinationFilename string, suffix string, customKey string, customValue string) (sasResult, error) {
+func (client Client) getSAS(ctx context.Context, payload string, destinationFilename string, suffix string, customKey string, customValue string) (sasResult, error) {
 	var result sasResult
 	credentials := client.credentials
 
@@ -115,7 +116,7 @@ func (client Client) getSAS(payload string, destinationFilename string, suffix s
 	HTTPClient := client.httpClient(time.Second * 10)
 
 	defer HTTPClient.CloseIdleConnections()
-	request, err := http.NewRequest("POST", credentials.URL+"/cts/payload", bytes.NewBuffer(body))
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, credentials.URL+"/cts/payload", bytes.NewBuffer(body))
 	if err != nil {
 		return result, err
 	}
@@ -163,7 +164,9 @@ func NewClient(settings Settings, credentials credentials.APICredentials) (Clien
 	return client, nil
 }
 
-func (client Client) SendFile(fd FileDetails) error {
+// SendFile uploads fd.SourceFilename to the storage the payload API assigns.
+// Cancelling ctx stops the upload and any retries.
+func (client Client) SendFile(ctx context.Context, fd FileDetails) error {
 	var suffix string
 
 	if client.settings.Profile == "" {
@@ -183,17 +186,17 @@ func (client Client) SendFile(fd FileDetails) error {
 		return fmt.Errorf("invalid custom key/value: %v", err)
 	}
 
-	result, err := client.getSAS(fd.PayloadType, fd.DestinationFilename, suffix, fd.CustomKey, fd.CustomValue)
+	result, err := client.getSAS(ctx, fd.PayloadType, fd.DestinationFilename, suffix, fd.CustomKey, fd.CustomValue)
 	if err == ErrUnknownPayload {
 		log.Warnf("Uploading file %v aborted since payload %v is not supported", fd.SourceFilename, fd.PayloadType)
 		return err
 	}
 	if err != nil {
-		return fmt.Errorf("could not generate SAS token: %v", err)
+		return fmt.Errorf("could not generate SAS token: %w", err)
 	}
 	if result.Type == "azure" {
 		log.Debugf("Got signed url for %v: %v", fd.SourceFilename, redactURL(result.SASURL))
-		err := uploadToAzureSAS(fd.SourceFilename, result, client.settings)
+		err := uploadToAzureSAS(ctx, fd.SourceFilename, result, client.settings)
 		if err != nil {
 			return err
 		}
@@ -237,7 +240,7 @@ func (client Client) SendFile(fd FileDetails) error {
 		// Start workers
 		for i := 0; i < partsTransmitterWorkers; i++ {
 			//log.Infoln("Starting transmitter worker " + strconv.Itoa(i))
-			go client.partsTransmitter(ChunkChan, control)
+			go client.partsTransmitter(ctx, ChunkChan, control)
 		}
 		// Collect data from completed multiparts
 		go func() {
@@ -269,7 +272,7 @@ func (client Client) SendFile(fd FileDetails) error {
 					} else {
 						currentSize = partSize
 					}
-					signedURL, err := client.getSignedURL(result, partNum)
+					signedURL, err := client.getSignedURL(ctx, result, partNum)
 					if err != nil {
 						return err
 					}
@@ -287,7 +290,7 @@ func (client Client) SendFile(fd FileDetails) error {
 		control.EndpointWG.Wait()
 		close(control.StopChan)
 		if control.HaltTransmitters {
-			result, err := client.abortMultipartUpload(result)
+			result, err := client.abortMultipartUpload(ctx, result)
 			if err != nil {
 				return err
 			} else {
@@ -298,7 +301,7 @@ func (client Client) SendFile(fd FileDetails) error {
 			sort.SliceStable(completeMultipartUpload.Parts, func(i, j int) bool {
 				return completeMultipartUpload.Parts[i].PartNumber < completeMultipartUpload.Parts[j].PartNumber
 			})
-			result, err := client.completeUpload(result, completeMultipartUpload.Parts)
+			result, err := client.completeUpload(ctx, result, completeMultipartUpload.Parts)
 			if err != nil {
 				return err
 			} else {

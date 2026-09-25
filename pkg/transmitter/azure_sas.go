@@ -30,7 +30,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func uploadToAzureSAS(filename string, sr sasResult, settings Settings) error {
+func uploadToAzureSAS(ctx context.Context, filename string, sr sasResult, settings Settings) error {
 	fileHandler, err := os.Open(filename)
 	if err != nil {
 		return err
@@ -54,16 +54,19 @@ func uploadToAzureSAS(filename string, sr sasResult, settings Settings) error {
 	}
 
 	for retry := 0; retry < settings.MaxRetries; retry++ {
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("upload of %v stopped: %w", filename, err)
+		}
 		log.Debugf("Try %v of %v", retry+1, settings.MaxRetries)
 		// Check if the blob exists by getting its properties
-		_, err = client.GetProperties(context.TODO(), nil)
+		_, err = client.GetProperties(ctx, nil)
 		err = redactError(err, sr.SASURL)
 		if err != nil {
 			log.Debugf("Properties error: %v", err)
 			var storageErr *azcore.ResponseError
 			if errors.As(err, &storageErr) && storageErr.ErrorCode == "BlobNotFound" {
 				// Upload the file since it was not found
-				_, err = client.UploadFile(context.TODO(), fileHandler,
+				_, err = client.UploadFile(ctx, fileHandler,
 					&azblob.UploadFileOptions{
 						BlockSize:   int64(104857600),
 						Concurrency: uint16(3),
@@ -86,6 +89,9 @@ func uploadToAzureSAS(filename string, sr sasResult, settings Settings) error {
 			// The client should not retry if the blob already exists
 			return ErrFileExists
 		}
+	}
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("upload of %v stopped: %w", filename, err)
 	}
 	return fmt.Errorf("failed to send payload after %v retries", maxRetry)
 }

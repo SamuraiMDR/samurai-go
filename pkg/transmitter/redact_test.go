@@ -96,7 +96,7 @@ func TestS3UploadDoesNotLogSignedURL(t *testing.T) {
 	client := newTestClient(t, api.URL, true)
 	file := writeTempFile(t, "payload.json", []byte("{}"))
 
-	err := client.SendFile(FileDetails{SourceFilename: file, PayloadType: "bouncer"})
+	err := client.SendFile(t.Context(), FileDetails{SourceFilename: file, PayloadType: "bouncer"})
 	if err != nil && strings.Contains(err.Error(), secret) {
 		t.Fatalf("returned error leaks the signature: %v", err)
 	}
@@ -114,7 +114,7 @@ func TestAzureUploadDoesNotLogSASURL(t *testing.T) {
 	client := newTestClient(t, api.URL, true)
 	file := writeTempFile(t, "payload.json", []byte("{}"))
 
-	err := client.SendFile(FileDetails{SourceFilename: file, PayloadType: "bouncer"})
+	err := client.SendFile(t.Context(), FileDetails{SourceFilename: file, PayloadType: "bouncer"})
 	if err == nil {
 		t.Fatal("expected the upload to an unreachable host to fail")
 	}
