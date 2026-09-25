@@ -24,7 +24,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/SamuraiMDR/samurai-go/pkg/credentials"
 	"github.com/inhies/go-bytesize"
 	log "github.com/sirupsen/logrus"
 )
@@ -77,10 +76,9 @@ type transmitterPayload struct {
 	remaining  int
 }
 
-func sendRequest(body []byte, credentials credentials.APICredentials) ([]byte, error) {
-	HTTPClient := &http.Client{
-		Timeout: time.Second * 10,
-	}
+func (client Client) sendRequest(body []byte) ([]byte, error) {
+	credentials := client.credentials
+	HTTPClient := client.httpClient(time.Second * 10)
 	defer HTTPClient.CloseIdleConnections()
 
 	request, err := http.NewRequest("POST", credentials.URL+"/cts/payload", bytes.NewBuffer(body))
@@ -115,14 +113,14 @@ func sendRequest(body []byte, credentials credentials.APICredentials) ([]byte, e
 	return bodyBytes, nil
 }
 
-func getSignedURL(partData sasResult, part int, credentials credentials.APICredentials) (signedURLMessage, error) {
+func (client Client) getSignedURL(partData sasResult, part int) (signedURLMessage, error) {
 	var result signedURLMessage
 	body, err := json.Marshal(signedURL{"GET_SIGNED_URL", partData.Key, partData.UploadId, part})
 	if err != nil {
 		return result, err
 	}
 
-	bodyBytes, err := sendRequest(body, credentials)
+	bodyBytes, err := client.sendRequest(body)
 	if err != nil {
 		return result, err
 	}
@@ -135,14 +133,14 @@ func getSignedURL(partData sasResult, part int, credentials credentials.APICrede
 	return result, nil
 }
 
-func completeUpload(partData sasResult, parts []parts, credentials credentials.APICredentials) (completeMultipartUploadMessage, error) {
+func (client Client) completeUpload(partData sasResult, parts []parts) (completeMultipartUploadMessage, error) {
 	var result completeMultipartUploadMessage
 	body, err := json.Marshal(completeMultipartUpload{"COMPLETE_MULTIPART_UPLOAD", partData.Key, partData.UploadId, parts})
 	if err != nil {
 		return result, err
 	}
 
-	bodyBytes, err := sendRequest(body, credentials)
+	bodyBytes, err := client.sendRequest(body)
 	if err != nil {
 		return result, err
 	}
@@ -155,14 +153,14 @@ func completeUpload(partData sasResult, parts []parts, credentials credentials.A
 	return result, nil
 }
 
-func abortMultipartUpload(partData sasResult, credentials credentials.APICredentials) (abortMultipartUploadMessage, error) {
+func (client Client) abortMultipartUpload(partData sasResult) (abortMultipartUploadMessage, error) {
 	var result abortMultipartUploadMessage
 	body, err := json.Marshal(abortedMultipartUpload{"ABORT_MULTIPART_UPLOAD", partData.Key, partData.UploadId})
 	if err != nil {
 		return result, err
 	}
 
-	bodyBytes, err := sendRequest(body, credentials)
+	bodyBytes, err := client.sendRequest(body)
 	if err != nil {
 		return result, err
 	}
@@ -175,7 +173,7 @@ func abortMultipartUpload(partData sasResult, credentials credentials.APICredent
 	return result, nil
 }
 
-func partsTransmitter(ChunkChan <-chan transmitterPayload, control control) {
+func (client Client) partsTransmitter(ChunkChan <-chan transmitterPayload, control control) {
 	for part := range ChunkChan {
 		for i := 0; i <= maxRetry; i++ {
 			if i >= maxRetry {
@@ -193,7 +191,7 @@ func partsTransmitter(ChunkChan <-chan transmitterPayload, control control) {
 				log.Warnf("  ... resending part %v, try %v \n", part.partNum, i)
 			}
 			parts := parts{}
-			HTTPClient := &http.Client{Timeout: time.Second * 600}
+			HTTPClient := client.httpClient(time.Second * 600)
 
 			request, err := http.NewRequest(http.MethodPut, part.signed_url, part.chunk)
 			if err != nil {

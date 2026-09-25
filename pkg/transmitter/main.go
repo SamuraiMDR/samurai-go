@@ -18,7 +18,6 @@ package transmitter
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -94,6 +93,7 @@ type sasResult struct {
 type Client struct {
 	credentials credentials.APICredentials
 	settings    Settings
+	transport   *http.Transport
 }
 
 type FileDetails struct {
@@ -105,16 +105,15 @@ type FileDetails struct {
 	CustomValue         string
 }
 
-func getSAS(payload string, destinationFilename string, suffix string, customKey string, customValue string, credentials credentials.APICredentials, settings Settings) (sasResult, error) {
+func (client Client) getSAS(payload string, destinationFilename string, suffix string, customKey string, customValue string) (sasResult, error) {
 	var result sasResult
+	credentials := client.credentials
 
-	body, err := json.Marshal(sas{payload, settings.Profile, suffix, destinationFilename, customKey, customValue})
+	body, err := json.Marshal(sas{payload, client.settings.Profile, suffix, destinationFilename, customKey, customValue})
 	if err != nil {
 		return result, err
 	}
-	HTTPClient := &http.Client{
-		Timeout: time.Second * 10,
-	}
+	HTTPClient := client.httpClient(time.Second * 10)
 
 	defer HTTPClient.CloseIdleConnections()
 	request, err := http.NewRequest("POST", credentials.URL+"/cts/payload", bytes.NewBuffer(body))
@@ -163,6 +162,7 @@ func NewClient(settings Settings, credentials credentials.APICredentials) (Clien
 	client := Client{
 		settings:    settings,
 		credentials: credentials,
+		transport:   newTransport(settings),
 	}
 	if client.settings.MaxRetries == 0 {
 		client.settings.MaxRetries = 3
@@ -175,10 +175,6 @@ func (client Client) SendFile(fd FileDetails) error {
 
 	if client.settings.Profile == "" {
 		client.settings.Profile = "default"
-	}
-
-	if client.settings.AllowInsecureTLS {
-		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: client.settings.AllowInsecureTLS}
 	}
 
 	if fd.FileSuffix == "" {
@@ -194,7 +190,7 @@ func (client Client) SendFile(fd FileDetails) error {
 		return fmt.Errorf("invalid custom key/value: %v", err)
 	}
 
-	result, err := getSAS(fd.PayloadType, fd.DestinationFilename, suffix, fd.CustomKey, fd.CustomValue, client.credentials, client.settings)
+	result, err := client.getSAS(fd.PayloadType, fd.DestinationFilename, suffix, fd.CustomKey, fd.CustomValue)
 	if err == ErrUnknownPayload {
 		log.Warnf("Uploading file %v aborted since payload %v is not supported", fd.SourceFilename, fd.PayloadType)
 		return err
@@ -248,7 +244,7 @@ func (client Client) SendFile(fd FileDetails) error {
 		// Start workers
 		for i := 0; i < partsTransmitterWorkers; i++ {
 			//log.Infoln("Starting transmitter worker " + strconv.Itoa(i))
-			go partsTransmitter(ChunkChan, control)
+			go client.partsTransmitter(ChunkChan, control)
 		}
 		// Collect data from completed multiparts
 		go func() {
@@ -280,7 +276,7 @@ func (client Client) SendFile(fd FileDetails) error {
 					} else {
 						currentSize = partSize
 					}
-					signedURL, err := getSignedURL(result, partNum, client.credentials)
+					signedURL, err := client.getSignedURL(result, partNum)
 					if err != nil {
 						return err
 					}
@@ -298,7 +294,7 @@ func (client Client) SendFile(fd FileDetails) error {
 		control.EndpointWG.Wait()
 		close(control.StopChan)
 		if control.HaltTransmitters {
-			result, err := abortMultipartUpload(result, client.credentials)
+			result, err := client.abortMultipartUpload(result)
 			if err != nil {
 				return err
 			} else {
@@ -309,7 +305,7 @@ func (client Client) SendFile(fd FileDetails) error {
 			sort.SliceStable(completeMultipartUpload.Parts, func(i, j int) bool {
 				return completeMultipartUpload.Parts[i].PartNumber < completeMultipartUpload.Parts[j].PartNumber
 			})
-			result, err := completeUpload(result, completeMultipartUpload.Parts, client.credentials)
+			result, err := client.completeUpload(result, completeMultipartUpload.Parts)
 			if err != nil {
 				return err
 			} else {
