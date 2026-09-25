@@ -18,9 +18,15 @@ package transmitter
 
 import (
 	"crypto/tls"
+	"errors"
 	"net/http"
 	"time"
 )
+
+// errRedirect is returned instead of following a redirect. Go forwards custom
+// headers such as x-api-key and passkey to the redirect target, including to
+// other hosts and from https to http, so following one could leak credentials.
+var errRedirect = errors.New("redirect not followed")
 
 // newTransport returns a transport owned by a single Client. TLS settings are
 // applied here rather than to http.DefaultTransport so that one client's
@@ -34,10 +40,14 @@ func newTransport(settings Settings) *http.Transport {
 	return transport
 }
 
-// httpClient returns an http.Client that uses the client's own transport.
+// httpClient returns an http.Client that uses the client's own transport and
+// refuses to follow redirects.
 func (client Client) httpClient(timeout time.Duration) *http.Client {
 	return &http.Client{
 		Transport: client.transport,
 		Timeout:   timeout,
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return errRedirect
+		},
 	}
 }

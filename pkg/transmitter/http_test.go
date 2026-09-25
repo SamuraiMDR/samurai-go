@@ -2,11 +2,13 @@ package transmitter
 
 import (
 	"crypto/tls"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/SamuraiMDR/samurai-go/pkg/credentials"
@@ -80,5 +82,26 @@ func TestNewTransportDefaultsToVerifiedTLS12(t *testing.T) {
 	}
 	if cfg.MinVersion < tls.VersionTLS12 {
 		t.Fatalf("MinVersion = %#x, want at least TLS 1.2", cfg.MinVersion)
+	}
+}
+
+func TestRedirectsAreNotFollowed(t *testing.T) {
+	var targetHit atomic.Bool
+	target := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		targetHit.Store(true)
+	}))
+	t.Cleanup(target.Close)
+	origin := httptest.NewTLSServer(http.RedirectHandler(target.URL+"/cts/payload", http.StatusTemporaryRedirect))
+	t.Cleanup(origin.Close)
+
+	client := newTestClient(t, origin.URL, true)
+	if _, err := client.getSAS("bouncer", "", "json", "", ""); !errors.Is(err, errRedirect) {
+		t.Fatalf("getSAS error = %v, want errRedirect", err)
+	}
+	if _, err := client.sendRequest([]byte("{}")); !errors.Is(err, errRedirect) {
+		t.Fatalf("sendRequest error = %v, want errRedirect", err)
+	}
+	if targetHit.Load() {
+		t.Fatal("redirect target received a request carrying the API credentials")
 	}
 }
