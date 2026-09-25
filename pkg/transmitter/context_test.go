@@ -60,7 +60,7 @@ func TestSendFileDeadline(t *testing.T) {
 		{
 			name: "azure upload hangs",
 			server: func(t *testing.T) string {
-				blob := httptest.NewServer(http.HandlerFunc(hang))
+				blob := httptest.NewTLSServer(http.HandlerFunc(hang))
 				t.Cleanup(blob.Close)
 				api := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					_ = json.NewEncoder(w).Encode(map[string]string{

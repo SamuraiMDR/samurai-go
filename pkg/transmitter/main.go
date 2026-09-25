@@ -147,7 +147,7 @@ func NewClient(settings Settings, credentials credentials.APICredentials) (Clien
 		credentials: credentials,
 		transport:   newTransport(settings),
 	}
-	if client.settings.MaxRetries == 0 {
+	if client.settings.MaxRetries <= 0 {
 		client.settings.MaxRetries = 3
 	}
 	return client, nil
@@ -185,7 +185,7 @@ func (client Client) SendFile(ctx context.Context, fd FileDetails) error {
 	}
 	if result.Type == "azure" {
 		log.Debugf("Got signed url for %v: %v", fd.SourceFilename, redactURL(result.SASURL))
-		err := uploadToAzureSAS(ctx, fd.SourceFilename, result, client.settings)
+		err := client.uploadToAzureSAS(ctx, fd.SourceFilename, result)
 		if err != nil {
 			return err
 		}
