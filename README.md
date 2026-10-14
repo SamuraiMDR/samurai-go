@@ -1,4 +1,3 @@
-[![Go Report Card](https://goreportcard.com/badge/github.com/SamuraiMDR/samurai-go)](https://goreportcard.com/report/github.com/SamuraiMDR/samurai-go)
 [![GitHub tag](https://img.shields.io/github/tag/SamuraiMDR/samurai-go.svg)](https://github.com/SamuraiMDR/samurai-go/tags)
 ------
 # Samurai Go client SDK
