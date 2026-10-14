@@ -43,8 +43,8 @@ var ErrUnknownPayload = errors.New("unknown payload")
 var ErrFileExists = errors.New("file already exists")
 
 // customKVRe enforces the same rules the payload API applies to a custom
-// key/value pair: lowercase letters only, length 1-20.
-var customKVRe = regexp.MustCompile(`^[a-z]{1,20}$`)
+// key/value pair: lowercase letters only, length 1-32.
+var customKVRe = regexp.MustCompile(`^[a-z]{1,32}$`)
 
 // validateCustomKV mirrors the server-side validation so callers fail fast
 // instead of after a round trip. Both must be set together and match the
@@ -57,7 +57,7 @@ func validateCustomKV(key, value string) error {
 		return fmt.Errorf("customKey and customValue must be set together")
 	}
 	if !customKVRe.MatchString(key) || !customKVRe.MatchString(value) {
-		return fmt.Errorf("customKey/customValue must be lowercase [a-z], max length 20")
+		return fmt.Errorf("customKey/customValue must be lowercase [a-z], max length 32")
 	}
 	return nil
 }

@@ -15,14 +15,14 @@ func TestValidateCustomKV(t *testing.T) {
 	}{
 		{"both empty is ok", "", "", false},
 		{"valid pair", "team", "blue", false},
-		{"max length pair", strings.Repeat("a", 20), strings.Repeat("b", 20), false},
+		{"max length pair", strings.Repeat("a", 32), strings.Repeat("b", 32), false},
 		{"key only", "team", "", true},
 		{"value only", "", "blue", true},
 		{"uppercase key", "Team", "blue", true},
 		{"uppercase value", "team", "Blue", true},
 		{"digit in value", "team", "blue1", true},
-		{"key too long", strings.Repeat("a", 21), "blue", true},
-		{"value too long", "team", strings.Repeat("b", 21), true},
+		{"key too long", strings.Repeat("a", 33), "blue", true},
+		{"value too long", "team", strings.Repeat("b", 33), true},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
