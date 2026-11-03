@@ -1,0 +1,9 @@
+trust:
+  packages:
+    # Go team's golang.org/x modules (often security fixes); ripen needs exact names.
+    - gomod:golang.org/x/net
+    - gomod:golang.org/x/sys
+    - gomod:golang.org/x/text
+    - gomod:golang.org/x/exp
+    - pre-commit:NTTS-Innovation/pre-commit-hooks
+    - docker:library/golang
