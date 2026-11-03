@@ -12,8 +12,8 @@ github.com/Azure/azure-sdk-for-go/sdk/storage/internal v0.1.0 h1:X/bTwe0qpvmvPPu
 github.com/Azure/azure-sdk-for-go/sdk/storage/internal v0.1.0/go.mod h1:+kX7ahyFelQ42F3RScM2CFgHJljp0phc/FieKLYVpFI=
 github.com/AzureAD/microsoft-authentication-library-for-go v1.8.0 h1:Nljr4q1GRA/5vCrMONS+g4u4LRHNgOXVSh3O43J2CnI=
 github.com/AzureAD/microsoft-authentication-library-for-go v1.8.0/go.mod h1:Y33QHnf0FfdVewFFISOGe20mkZbxX4H839o955/PoeI=
-github.com/SamuraiMDR/samurai-go/v2 v2.0.1 h1:w3n+f95p64Jl2ohrD2f7q+2eenkTjcU0r3QoEf5wn9Q=
-github.com/SamuraiMDR/samurai-go/v2 v2.0.1/go.mod h1:jcaCVr19Y0E+Q5niM3U/B3RrDYaR1IHHvGmFu77mso8=
+github.com/SamuraiMDR/samurai-go/v2 v2.0.2 h1:lqzxtdvt40RoLJcte0f2DqNxqQqOqOQDD1e110fhwDA=
+github.com/SamuraiMDR/samurai-go/v2 v2.0.2/go.mod h1:Fq6d8TpiqaFiEn2ap04MR30xv/3yvLiP4mofrSCM0MQ=
 github.com/andybalholm/brotli v1.2.3 h1:8H1qwOkl2LPfjf3YezB90JnCliZb6SInJ/OJkEbA5NQ=
 github.com/andybalholm/brotli v1.2.3/go.mod h1:rzTDkvFWvIrjDXZHkuS16NPggd91W3kUSvPlQ1pLaKY=
 github.com/apache/arrow-go/v18 v18.8.0 h1:BLOzbPv7bxMPgXPacAg6HQjnxupYsZzC4tf+FkqPU/M=
