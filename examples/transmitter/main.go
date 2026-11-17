@@ -81,8 +81,9 @@ func main() {
 		PayloadType:         payloadType,
 		// CustomKey and CustomValue add a single custom key/value pair to the
 		// token-request body sent to the payload API. Leave empty to omit.
-		// CustomKey:   "source",
-		// CustomValue: "example",
+		// Both must be lowercase [a-z_-], start with a letter, max length 32.
+		// CustomKey:   "source_type",
+		// CustomValue: "example-app",
 	})
 	if err != nil {
 		log.Fatal(err)

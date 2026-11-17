@@ -57,9 +57,10 @@ func main() {
 		PayloadType:    "pcap",
 		// Optional: DestinationFilename sets the name used in storage.
 		// Optional: CustomKey/CustomValue add a single custom key/value pair
-		// to the token-request body sent to the payload API.
-		// CustomKey:   "source",
-		// CustomValue: "example",
+		// to the token-request body sent to the payload API. Both must be
+		// set together, lowercase [a-z_-], start with a letter, max length 32.
+		// CustomKey:   "source_type",
+		// CustomValue: "example-app",
 	})
 	if err != nil {
 		log.Fatal(err)
