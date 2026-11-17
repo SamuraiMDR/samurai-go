@@ -7,3 +7,4 @@ trust:
     - gomod:golang.org/x/exp
     - pre-commit:NTTS-Innovation/pre-commit-hooks
     - docker:library/golang
+    - gomod:github.com/SamuraiMDR/samurai-go/v2
